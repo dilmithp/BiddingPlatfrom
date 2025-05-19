@@ -46,6 +46,13 @@ public class ItemDetailsServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
+        // Get success message from session if it exists
+        HttpSession session = request.getSession(false);
+        if (session != null && session.getAttribute("successMessage") != null) {
+            request.setAttribute("successMessage", session.getAttribute("successMessage"));
+            session.removeAttribute("successMessage");
+        }
+        
         try {
             // Get item ID from request parameter
             int itemId = Integer.parseInt(request.getParameter("id"));
@@ -59,6 +66,20 @@ public class ItemDetailsServlet extends HttpServlet {
                 return;
             }
             
+            // Set default values for missing properties
+            if (item.getCondition() == null) {
+                item.setCondition("Not specified");
+            }
+            if (item.getLocation() == null) {
+                item.setLocation("Not specified");
+            }
+            if (item.getShippingInfo() == null) {
+                item.setShippingInfo("Contact seller for shipping details");
+            }
+            if (item.getPaymentMethods() == null) {
+                item.setPaymentMethods("Contact seller for payment options");
+            }
+            
             // Get bid history
             List<Bid> bidHistory = bidService.getBidsByItem(itemId);
             
@@ -69,7 +90,6 @@ public class ItemDetailsServlet extends HttpServlet {
             List<Item> similarItems = itemService.getSimilarItems(itemId, 4);
             
             // Check if item is in user's watchlist
-            HttpSession session = request.getSession(false);
             boolean isInWatchlist = false;
             
             if (session != null && session.getAttribute("userId") != null) {
@@ -91,9 +111,20 @@ public class ItemDetailsServlet extends HttpServlet {
             LOGGER.log(Level.SEVERE, "Invalid item ID format", e);
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid item ID");
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Database error in ItemDetailsServlet", e);
+            LOGGER.log(Level.SEVERE, "Database error in ItemDetailsServlet: {0}", e.getMessage());
             request.setAttribute("errorMessage", "Database error: " + e.getMessage());
             request.getRequestDispatcher("error.jsp").forward(request, response);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Unexpected error in ItemDetailsServlet: {0}", e.getMessage());
+            request.setAttribute("errorMessage", "Unexpected error: " + e.getMessage());
+            request.getRequestDispatcher("error.jsp").forward(request, response);
         }
+    }
+    
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        // Handle any POST requests by forwarding to doGet
+        doGet(request, response);
     }
 }

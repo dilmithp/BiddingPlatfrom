@@ -1,11 +1,11 @@
 package com.bidmaster.dao.impl;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -22,20 +22,44 @@ import com.bidmaster.util.DBConnectionUtil;
 public class BidDAOImpl implements BidDAO {
     private static final Logger LOGGER = Logger.getLogger(BidDAOImpl.class.getName());
     
+    // SQL queries
     private static final String INSERT_BID = 
         "INSERT INTO Bids (itemId, bidderId, bidAmount, status) VALUES (?, ?, ?, ?)";
     
     private static final String GET_BID_BY_ID = 
-        "SELECT * FROM Bids WHERE bidId = ?";
+        "SELECT b.*, i.title AS itemTitle, i.imageUrl AS itemImageUrl, u.username AS bidderUsername " +
+        "FROM Bids b " +
+        "JOIN Items i ON b.itemId = i.itemId " +
+        "JOIN Users u ON b.bidderId = u.userId " +
+        "WHERE b.bidId = ?";
     
     private static final String GET_BIDS_BY_ITEM = 
-        "SELECT b.*, u.username AS bidderUsername FROM Bids b JOIN Users u ON b.bidderId = u.userId WHERE b.itemId = ? ORDER BY b.bidAmount DESC";
+        "SELECT b.*, i.title AS itemTitle, i.imageUrl AS itemImageUrl, u.username AS bidderUsername " +
+        "FROM Bids b " +
+        "JOIN Items i ON b.itemId = i.itemId " +
+        "JOIN Users u ON b.bidderId = u.userId " +
+        "WHERE b.itemId = ? " +
+        "ORDER BY b.bidAmount DESC";
     
     private static final String GET_BIDS_BY_BIDDER = 
-        "SELECT b.*, i.title AS itemTitle FROM Bids b JOIN Items i ON b.itemId = i.itemId WHERE b.bidderId = ? ORDER BY b.bidTime DESC";
+        "SELECT b.*, i.title AS itemTitle, i.imageUrl AS itemImageUrl, i.currentPrice, " +
+        "i.endTime, i.status AS itemStatus, u.username AS bidderUsername, " +
+        "s.username AS sellerUsername " +
+        "FROM Bids b " +
+        "JOIN Items i ON b.itemId = i.itemId " +
+        "JOIN Users u ON b.bidderId = u.userId " +
+        "JOIN Users s ON i.sellerId = s.userId " +
+        "WHERE b.bidderId = ? " +
+        "ORDER BY b.bidTime DESC";
     
     private static final String GET_HIGHEST_BID_FOR_ITEM = 
-        "SELECT b.*, u.username AS bidderUsername FROM Bids b JOIN Users u ON b.bidderId = u.userId WHERE b.itemId = ? ORDER BY b.bidAmount DESC LIMIT 1";
+        "SELECT b.*, i.title AS itemTitle, i.imageUrl AS itemImageUrl, u.username AS bidderUsername " +
+        "FROM Bids b " +
+        "JOIN Items i ON b.itemId = i.itemId " +
+        "JOIN Users u ON b.bidderId = u.userId " +
+        "WHERE b.itemId = ? " +
+        "ORDER BY b.bidAmount DESC " +
+        "LIMIT 1";
     
     private static final String UPDATE_BID_STATUS = 
         "UPDATE Bids SET status = ? WHERE bidId = ?";
@@ -56,31 +80,38 @@ public class BidDAOImpl implements BidDAO {
         "SELECT COUNT(*) FROM Bids WHERE bidTime >= DATE_SUB(NOW(), INTERVAL ? DAY)";
     
     private static final String GET_BIDS_IN_DATE_RANGE = 
-        "SELECT b.*, u.username as bidderUsername, i.title as itemTitle " +
+        "SELECT b.*, i.title AS itemTitle, i.imageUrl AS itemImageUrl, u.username AS bidderUsername " +
         "FROM Bids b " +
-        "JOIN Users u ON b.bidderId = u.userId " +
         "JOIN Items i ON b.itemId = i.itemId " +
-        "WHERE b.bidTime BETWEEN ? AND ? " +
+        "JOIN Users u ON b.bidderId = u.userId " +
+        "WHERE DATE(b.bidTime) BETWEEN ? AND ? " +
         "ORDER BY b.bidTime DESC";
     
     private static final String GET_DAILY_BID_COUNTS = 
-        "SELECT DATE_FORMAT(bidTime, '%Y-%m-%d') as day, COUNT(*) as count " +
+        "SELECT DATE(bidTime) as bidDate, COUNT(*) as bidCount " +
         "FROM Bids " +
-        "WHERE bidTime BETWEEN ? AND ? " +
-        "GROUP BY DATE_FORMAT(bidTime, '%Y-%m-%d') " +
-        "ORDER BY day";
+        "WHERE DATE(bidTime) BETWEEN ? AND ? " +
+        "GROUP BY DATE(bidTime) " +
+        "ORDER BY bidDate";
     
     private static final String GET_RECENT_BIDS_FOR_SELLER = 
-        "SELECT b.*, u.username as bidderUsername, i.title as itemTitle " +
+        "SELECT b.*, i.title AS itemTitle, i.imageUrl AS itemImageUrl, " +
+        "i.currentPrice, i.endTime, u.username AS bidderUsername " +
         "FROM Bids b " +
-        "JOIN Users u ON b.bidderId = u.userId " +
         "JOIN Items i ON b.itemId = i.itemId " +
+        "JOIN Users u ON b.bidderId = u.userId " +
         "WHERE i.sellerId = ? " +
         "ORDER BY b.bidTime DESC " +
         "LIMIT ?";
     
     private static final String GET_TOTAL_BIDS_COUNT_FOR_SELLER = 
-        "SELECT COUNT(*) FROM Bids b JOIN Items i ON b.itemId = i.itemId WHERE i.sellerId = ?";
+        "SELECT COUNT(*) FROM Bids b " +
+        "JOIN Items i ON b.itemId = i.itemId " +
+        "WHERE i.sellerId = ?";
+    
+    private static final String UPDATE_PREVIOUS_HIGHEST_BID = 
+        "UPDATE Bids SET status = 'outbid' " +
+        "WHERE itemId = ? AND bidId != ? AND status = 'active'";
 
     @Override
     public int insertBid(Bid bid) throws SQLException {
@@ -90,7 +121,7 @@ public class BidDAOImpl implements BidDAO {
             preparedStatement.setInt(1, bid.getItemId());
             preparedStatement.setInt(2, bid.getBidderId());
             preparedStatement.setBigDecimal(3, bid.getBidAmount());
-            preparedStatement.setString(4, bid.getStatus() != null ? bid.getStatus() : "active");
+            preparedStatement.setString(4, bid.getStatus());
             
             int affectedRows = preparedStatement.executeUpdate();
             
@@ -117,7 +148,6 @@ public class BidDAOImpl implements BidDAO {
 
     @Override
     public Bid getBidById(int bidId) throws SQLException {
-        Bid bid = null;
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_BID_BY_ID)) {
             
@@ -125,7 +155,7 @@ public class BidDAOImpl implements BidDAO {
             
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    bid = extractBidFromResultSet(resultSet);
+                    return extractBidFromResultSet(resultSet);
                 }
             }
         } catch (SQLException e) {
@@ -133,12 +163,13 @@ public class BidDAOImpl implements BidDAO {
             throw e;
         }
         
-        return bid;
+        return null;
     }
 
     @Override
     public List<Bid> getBidsByItem(int itemId) throws SQLException {
         List<Bid> bids = new ArrayList<>();
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_BIDS_BY_ITEM)) {
             
@@ -147,7 +178,6 @@ public class BidDAOImpl implements BidDAO {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Bid bid = extractBidFromResultSet(resultSet);
-                    bid.setBidderUsername(resultSet.getString("bidderUsername"));
                     bids.add(bid);
                 }
             }
@@ -162,6 +192,7 @@ public class BidDAOImpl implements BidDAO {
     @Override
     public List<Bid> getBidsByBidder(int bidderId) throws SQLException {
         List<Bid> bids = new ArrayList<>();
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_BIDS_BY_BIDDER)) {
             
@@ -170,7 +201,18 @@ public class BidDAOImpl implements BidDAO {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Bid bid = extractBidFromResultSet(resultSet);
-                    bid.setItemTitle(resultSet.getString("itemTitle"));
+                    
+                    // Additional fields for bidder view
+                    bid.setCurrentPrice(resultSet.getBigDecimal("currentPrice"));
+                    
+                    Timestamp endTime = resultSet.getTimestamp("endTime");
+                    if (endTime != null) {
+                        bid.setEndTime(endTime.toLocalDateTime());
+                    }
+                    
+                    bid.setItemStatus(resultSet.getString("itemStatus"));
+                    bid.setSellerUsername(resultSet.getString("sellerUsername"));
+                    
                     bids.add(bid);
                 }
             }
@@ -184,7 +226,6 @@ public class BidDAOImpl implements BidDAO {
 
     @Override
     public Bid getHighestBidForItem(int itemId) throws SQLException {
-        Bid bid = null;
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_HIGHEST_BID_FOR_ITEM)) {
             
@@ -192,8 +233,7 @@ public class BidDAOImpl implements BidDAO {
             
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    bid = extractBidFromResultSet(resultSet);
-                    bid.setBidderUsername(resultSet.getString("bidderUsername"));
+                    return extractBidFromResultSet(resultSet);
                 }
             }
         } catch (SQLException e) {
@@ -201,7 +241,7 @@ public class BidDAOImpl implements BidDAO {
             throw e;
         }
         
-        return bid;
+        return null;
     }
 
     @Override
@@ -214,7 +254,7 @@ public class BidDAOImpl implements BidDAO {
             
             int rowsAffected = preparedStatement.executeUpdate();
             
-            LOGGER.log(Level.INFO, "Bid status updated: ID {0}, Status: {1}, Rows affected: {2}", 
+            LOGGER.log(Level.INFO, "Bid status updated: {0}, Status: {1}, Rows affected: {2}", 
                     new Object[]{bidId, status, rowsAffected});
             
             return rowsAffected > 0;
@@ -234,7 +274,7 @@ public class BidDAOImpl implements BidDAO {
             
             int rowsAffected = preparedStatement.executeUpdate();
             
-            LOGGER.log(Level.INFO, "All bids status updated for item: ID {0}, Status: {1}, Rows affected: {2}", 
+            LOGGER.log(Level.INFO, "All bids status updated for item: {0}, Status: {1}, Rows affected: {2}", 
                     new Object[]{itemId, status, rowsAffected});
             
             return rowsAffected > 0;
@@ -253,7 +293,8 @@ public class BidDAOImpl implements BidDAO {
             
             int rowsAffected = preparedStatement.executeUpdate();
             
-            LOGGER.log(Level.INFO, "Bid deleted: ID {0}, Rows affected: {1}", new Object[]{bidId, rowsAffected});
+            LOGGER.log(Level.INFO, "Bid deleted: {0}, Rows affected: {1}", 
+                    new Object[]{bidId, rowsAffected});
             
             return rowsAffected > 0;
         } catch (SQLException e) {
@@ -273,13 +314,13 @@ public class BidDAOImpl implements BidDAO {
                 if (resultSet.next()) {
                     return resultSet.getInt(1);
                 }
+                
+                return 0;
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error counting bids for item: " + itemId, e);
             throw e;
         }
-        
-        return 0;
     }
 
     @Override
@@ -291,6 +332,7 @@ public class BidDAOImpl implements BidDAO {
             if (resultSet.next()) {
                 return resultSet.getInt(1);
             }
+            
             return 0;
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error getting total bid count", e);
@@ -309,6 +351,7 @@ public class BidDAOImpl implements BidDAO {
                 if (resultSet.next()) {
                     return resultSet.getInt(1);
                 }
+                
                 return 0;
             }
         } catch (SQLException e) {
@@ -320,17 +363,16 @@ public class BidDAOImpl implements BidDAO {
     @Override
     public List<Bid> getBidsInDateRange(LocalDate startDate, LocalDate endDate) throws SQLException {
         List<Bid> bids = new ArrayList<>();
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_BIDS_IN_DATE_RANGE)) {
             
-            preparedStatement.setDate(1, Date.valueOf(startDate));
-            preparedStatement.setDate(2, Date.valueOf(endDate));
+            preparedStatement.setDate(1, java.sql.Date.valueOf(startDate));
+            preparedStatement.setDate(2, java.sql.Date.valueOf(endDate));
             
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Bid bid = extractBidFromResultSet(resultSet);
-                    bid.setBidderUsername(resultSet.getString("bidderUsername"));
-                    bid.setItemTitle(resultSet.getString("itemTitle"));
                     bids.add(bid);
                 }
             }
@@ -338,35 +380,39 @@ public class BidDAOImpl implements BidDAO {
             LOGGER.log(Level.SEVERE, "Error getting bids in date range", e);
             throw e;
         }
+        
         return bids;
     }
 
     @Override
     public Map<String, Integer> getDailyBidCounts(LocalDate startDate, LocalDate endDate) throws SQLException {
-        Map<String, Integer> dailyBidCounts = new LinkedHashMap<>();
+        Map<String, Integer> dailyCounts = new LinkedHashMap<>();
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_DAILY_BID_COUNTS)) {
             
-            preparedStatement.setDate(1, Date.valueOf(startDate));
-            preparedStatement.setDate(2, Date.valueOf(endDate));
+            preparedStatement.setDate(1, java.sql.Date.valueOf(startDate));
+            preparedStatement.setDate(2, java.sql.Date.valueOf(endDate));
             
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
-                    String day = resultSet.getString("day");
-                    int count = resultSet.getInt("count");
-                    dailyBidCounts.put(day, count);
+                    String bidDate = resultSet.getDate("bidDate").toString();
+                    int bidCount = resultSet.getInt("bidCount");
+                    dailyCounts.put(bidDate, bidCount);
                 }
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error getting daily bid counts", e);
             throw e;
         }
-        return dailyBidCounts;
+        
+        return dailyCounts;
     }
-    
+
     @Override
     public List<Bid> getRecentBidsForSeller(int sellerId, int limit) throws SQLException {
         List<Bid> bids = new ArrayList<>();
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_RECENT_BIDS_FOR_SELLER)) {
             
@@ -376,8 +422,15 @@ public class BidDAOImpl implements BidDAO {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Bid bid = extractBidFromResultSet(resultSet);
-                    bid.setBidderUsername(resultSet.getString("bidderUsername"));
-                    bid.setItemTitle(resultSet.getString("itemTitle"));
+                    
+                    // Additional fields for seller view
+                    bid.setCurrentPrice(resultSet.getBigDecimal("currentPrice"));
+                    
+                    Timestamp endTime = resultSet.getTimestamp("endTime");
+                    if (endTime != null) {
+                        bid.setEndTime(endTime.toLocalDateTime());
+                    }
+                    
                     bids.add(bid);
                 }
             }
@@ -385,9 +438,10 @@ public class BidDAOImpl implements BidDAO {
             LOGGER.log(Level.SEVERE, "Error getting recent bids for seller: " + sellerId, e);
             throw e;
         }
+        
         return bids;
     }
-    
+
     @Override
     public int getTotalBidsCountForSeller(int sellerId) throws SQLException {
         try (Connection connection = DBConnectionUtil.getConnection();
@@ -399,10 +453,31 @@ public class BidDAOImpl implements BidDAO {
                 if (resultSet.next()) {
                     return resultSet.getInt(1);
                 }
+                
                 return 0;
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error getting total bids count for seller: " + sellerId, e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public boolean updatePreviousHighestBid(int itemId, int newBidId) throws SQLException {
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_PREVIOUS_HIGHEST_BID)) {
+            
+            preparedStatement.setInt(1, itemId);
+            preparedStatement.setInt(2, newBidId);
+            
+            int rowsAffected = preparedStatement.executeUpdate();
+            
+            LOGGER.log(Level.INFO, "Previous highest bid updated for item: {0}, New bid ID: {1}, Rows affected: {2}", 
+                    new Object[]{itemId, newBidId, rowsAffected});
+            
+            return true; // Even if no rows affected, consider it successful
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error updating previous highest bid for item: " + itemId, e);
             throw e;
         }
     }
@@ -420,8 +495,42 @@ public class BidDAOImpl implements BidDAO {
         bid.setItemId(resultSet.getInt("itemId"));
         bid.setBidderId(resultSet.getInt("bidderId"));
         bid.setBidAmount(resultSet.getBigDecimal("bidAmount"));
-        bid.setBidTime(resultSet.getTimestamp("bidTime"));
+        
+        Timestamp bidTime = resultSet.getTimestamp("bidTime");
+        if (bidTime != null) {
+            bid.setBidTime(bidTime.toLocalDateTime());
+        }
+        
         bid.setStatus(resultSet.getString("status"));
+        
+        // Additional fields from joins
+        bid.setItemTitle(resultSet.getString("itemTitle"));
+        bid.setItemImageUrl(resultSet.getString("itemImageUrl"));
+        bid.setBidderUsername(resultSet.getString("bidderUsername"));
+        
         return bid;
     }
+    private static final String UPDATE_BID = 
+    	    "UPDATE Bids SET bidAmount = ? WHERE bidId = ?";
+
+    	@Override
+    	public boolean updateBid(Bid bid) throws SQLException {
+    	    try (Connection connection = DBConnectionUtil.getConnection();
+    	         PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_BID)) {
+    	        
+    	        preparedStatement.setBigDecimal(1, bid.getBidAmount());
+    	        preparedStatement.setInt(2, bid.getBidId());
+    	        
+    	        int rowsAffected = preparedStatement.executeUpdate();
+    	        
+    	        LOGGER.log(Level.INFO, "Bid updated: {0}, Amount: {1}, Rows affected: {2}", 
+    	                new Object[]{bid.getBidId(), bid.getBidAmount(), rowsAffected});
+    	        
+    	        return rowsAffected > 0;
+    	    } catch (SQLException e) {
+    	        LOGGER.log(Level.SEVERE, "Error updating bid: " + bid.getBidId(), e);
+    	        throw e;
+    	    }
+    	}
+
 }

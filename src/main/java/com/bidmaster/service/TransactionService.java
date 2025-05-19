@@ -115,7 +115,7 @@ public interface TransactionService {
      * @throws SQLException if a database error occurs
      */
     List<Transaction> getTransactionsByStatus(String status) throws SQLException;
-    
+
     /**
      * Gets completed sales by seller
      *
@@ -124,7 +124,7 @@ public interface TransactionService {
      * @throws SQLException if a database error occurs
      */
     List<Transaction> getCompletedSalesBySeller(int sellerId) throws SQLException;
-    
+
     /**
      * Gets the count of completed sales by seller
      *
@@ -133,7 +133,7 @@ public interface TransactionService {
      * @throws SQLException if a database error occurs
      */
     int getCompletedSalesCountBySeller(int sellerId) throws SQLException;
-    
+
     /**
      * Gets the total revenue by seller
      *
@@ -142,4 +142,13 @@ public interface TransactionService {
      * @throws SQLException if a database error occurs
      */
     double getTotalRevenueBySeller(int sellerId) throws SQLException;
+    
+    /**
+     * Gets transactions by user (both as buyer and seller)
+     *
+     * @param userId The user ID
+     * @return List of transactions for the user
+     * @throws SQLException if a database error occurs
+     */
+    List<Transaction> getTransactionsByUser(int userId) throws SQLException;
 }

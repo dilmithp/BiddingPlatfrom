@@ -78,6 +78,8 @@
     </style>
 </head>
 <body>
+    <!-- Include Header -->
+    <jsp:include page="includes/header.jsp" />
     
     <div class="container my-5">
         <!-- Alert Messages -->
@@ -361,7 +363,9 @@
             </div>
         </section>
     </div>
-   
+    
+    <!-- Include Footer -->
+    <jsp:include page="includes/footer.jsp" />
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

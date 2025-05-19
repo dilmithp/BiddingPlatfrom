@@ -25,11 +25,6 @@ public class FeedbackServiceImpl implements FeedbackService {
     @Override
     public int createFeedback(Feedback feedback) throws SQLException {
         try {
-            // Check if feedback already exists
-            if (feedbackDAO.hasFeedbackForTransaction(feedback.getFromUserId(), feedback.getTransactionId())) {
-                throw new SQLException("You have already provided feedback for this transaction");
-            }
-            
             return feedbackDAO.insertFeedback(feedback);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error creating feedback", e);
@@ -58,9 +53,9 @@ public class FeedbackServiceImpl implements FeedbackService {
     }
 
     @Override
-    public List<Feedback> getFeedbackGivenByUser(int userId) throws SQLException {
+    public List<Feedback> getFeedbackGiven(int userId) throws SQLException {
         try {
-            return feedbackDAO.getFeedbackGivenByUser(userId);
+            return feedbackDAO.getFeedbackGiven(userId);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error getting feedback given by user", e);
             throw e;
@@ -68,9 +63,9 @@ public class FeedbackServiceImpl implements FeedbackService {
     }
 
     @Override
-    public List<Feedback> getFeedbackReceivedByUser(int userId) throws SQLException {
+    public List<Feedback> getFeedbackReceived(int userId) throws SQLException {
         try {
-            return feedbackDAO.getFeedbackReceivedByUser(userId);
+            return feedbackDAO.getFeedbackReceived(userId);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error getting feedback received by user", e);
             throw e;
@@ -112,7 +107,7 @@ public class FeedbackServiceImpl implements FeedbackService {
         try {
             return feedbackDAO.hasFeedbackForTransaction(userId, transactionId);
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error checking feedback existence", e);
+            LOGGER.log(Level.SEVERE, "Error checking if user has feedback for transaction", e);
             throw e;
         }
     }

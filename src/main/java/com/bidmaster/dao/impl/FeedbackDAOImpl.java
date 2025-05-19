@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -20,15 +21,56 @@ import com.bidmaster.util.DBConnectionUtil;
 public class FeedbackDAOImpl implements FeedbackDAO {
     private static final Logger LOGGER = Logger.getLogger(FeedbackDAOImpl.class.getName());
     
-    private static final String INSERT_FEEDBACK = "INSERT INTO Feedback (transactionId, fromUserId, toUserId, rating, comment) VALUES (?, ?, ?, ?, ?)";
-    private static final String GET_FEEDBACK_BY_ID = "SELECT f.*, uf.username as fromUsername, ut.username as toUsername, i.title as itemTitle FROM Feedback f JOIN Users uf ON f.fromUserId = uf.userId JOIN Users ut ON f.toUserId = ut.userId JOIN Transactions t ON f.transactionId = t.transactionId JOIN Items i ON t.itemId = i.itemId WHERE f.feedbackId = ?";
-    private static final String GET_FEEDBACK_BY_TRANSACTION = "SELECT f.*, uf.username as fromUsername, ut.username as toUsername, i.title as itemTitle FROM Feedback f JOIN Users uf ON f.fromUserId = uf.userId JOIN Users ut ON f.toUserId = ut.userId JOIN Transactions t ON f.transactionId = t.transactionId JOIN Items i ON t.itemId = i.itemId WHERE f.transactionId = ?";
-    private static final String GET_FEEDBACK_GIVEN_BY_USER = "SELECT f.*, uf.username as fromUsername, ut.username as toUsername, i.title as itemTitle FROM Feedback f JOIN Users uf ON f.fromUserId = uf.userId JOIN Users ut ON f.toUserId = ut.userId JOIN Transactions t ON f.transactionId = t.transactionId JOIN Items i ON t.itemId = i.itemId WHERE f.fromUserId = ? ORDER BY f.feedbackDate DESC";
-    private static final String GET_FEEDBACK_RECEIVED_BY_USER = "SELECT f.*, uf.username as fromUsername, ut.username as toUsername, i.title as itemTitle FROM Feedback f JOIN Users uf ON f.fromUserId = uf.userId JOIN Users ut ON f.toUserId = ut.userId JOIN Transactions t ON f.transactionId = t.transactionId JOIN Items i ON t.itemId = i.itemId WHERE f.toUserId = ? ORDER BY f.feedbackDate DESC";
-    private static final String UPDATE_FEEDBACK = "UPDATE Feedback SET rating = ?, comment = ? WHERE feedbackId = ?";
-    private static final String DELETE_FEEDBACK = "DELETE FROM Feedback WHERE feedbackId = ?";
-    private static final String GET_AVERAGE_RATING = "SELECT AVG(rating) FROM Feedback WHERE toUserId = ?";
-    private static final String CHECK_FEEDBACK_EXISTS = "SELECT COUNT(*) FROM Feedback WHERE fromUserId = ? AND transactionId = ?";
+    private static final String INSERT_FEEDBACK = 
+        "INSERT INTO Feedback (transactionId, fromUserId, toUserId, rating, comment) VALUES (?, ?, ?, ?, ?)";
+    
+    private static final String GET_FEEDBACK_BY_ID = 
+        "SELECT f.*, uf.username as fromUsername, ut.username as toUsername, i.title as itemTitle " +
+        "FROM Feedback f " +
+        "JOIN Users uf ON f.fromUserId = uf.userId " +
+        "JOIN Users ut ON f.toUserId = ut.userId " +
+        "JOIN Transactions t ON f.transactionId = t.transactionId " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "WHERE f.feedbackId = ?";
+    
+    private static final String GET_FEEDBACK_BY_TRANSACTION = 
+        "SELECT f.*, uf.username as fromUsername, ut.username as toUsername, i.title as itemTitle " +
+        "FROM Feedback f " +
+        "JOIN Users uf ON f.fromUserId = uf.userId " +
+        "JOIN Users ut ON f.toUserId = ut.userId " +
+        "JOIN Transactions t ON f.transactionId = t.transactionId " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "WHERE f.transactionId = ?";
+    
+    private static final String GET_FEEDBACK_GIVEN_BY_USER = 
+        "SELECT f.*, uf.username as fromUsername, ut.username as toUsername, i.title as itemTitle " +
+        "FROM Feedback f " +
+        "JOIN Users uf ON f.fromUserId = uf.userId " +
+        "JOIN Users ut ON f.toUserId = ut.userId " +
+        "JOIN Transactions t ON f.transactionId = t.transactionId " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "WHERE f.fromUserId = ? ORDER BY f.feedbackDate DESC";
+    
+    private static final String GET_FEEDBACK_RECEIVED_BY_USER = 
+        "SELECT f.*, uf.username as fromUsername, ut.username as toUsername, i.title as itemTitle " +
+        "FROM Feedback f " +
+        "JOIN Users uf ON f.fromUserId = uf.userId " +
+        "JOIN Users ut ON f.toUserId = ut.userId " +
+        "JOIN Transactions t ON f.transactionId = t.transactionId " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "WHERE f.toUserId = ? ORDER BY f.feedbackDate DESC";
+    
+    private static final String UPDATE_FEEDBACK = 
+        "UPDATE Feedback SET rating = ?, comment = ? WHERE feedbackId = ?";
+    
+    private static final String DELETE_FEEDBACK = 
+        "DELETE FROM Feedback WHERE feedbackId = ?";
+    
+    private static final String GET_AVERAGE_RATING = 
+        "SELECT AVG(rating) FROM Feedback WHERE toUserId = ?";
+    
+    private static final String CHECK_FEEDBACK_EXISTS = 
+        "SELECT COUNT(*) FROM Feedback WHERE fromUserId = ? AND transactionId = ?";
 
     @Override
     public int insertFeedback(Feedback feedback) throws SQLException {
@@ -51,7 +93,7 @@ public class FeedbackDAOImpl implements FeedbackDAO {
                 if (generatedKeys.next()) {
                     int feedbackId = generatedKeys.getInt(1);
                     feedback.setFeedbackId(feedbackId);
-                    LOGGER.log(Level.INFO, "Feedback created successfully: ID {0}, Rating: {1}", 
+                    LOGGER.log(Level.INFO, "Feedback created successfully: ID {0}, Rating: {1}",
                             new Object[]{feedbackId, feedback.getRating()});
                     return feedbackId;
                 } else {
@@ -67,6 +109,7 @@ public class FeedbackDAOImpl implements FeedbackDAO {
     @Override
     public Feedback getFeedbackById(int feedbackId) throws SQLException {
         Feedback feedback = null;
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_FEEDBACK_BY_ID)) {
             
@@ -81,12 +124,14 @@ public class FeedbackDAOImpl implements FeedbackDAO {
             LOGGER.log(Level.SEVERE, "Error getting feedback by ID: " + feedbackId, e);
             throw e;
         }
+        
         return feedback;
     }
 
     @Override
     public List<Feedback> getFeedbackByTransaction(int transactionId) throws SQLException {
         List<Feedback> feedbackList = new ArrayList<>();
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_FEEDBACK_BY_TRANSACTION)) {
             
@@ -102,12 +147,14 @@ public class FeedbackDAOImpl implements FeedbackDAO {
             LOGGER.log(Level.SEVERE, "Error getting feedback by transaction: " + transactionId, e);
             throw e;
         }
+        
         return feedbackList;
     }
 
     @Override
-    public List<Feedback> getFeedbackGivenByUser(int userId) throws SQLException {
+    public List<Feedback> getFeedbackGiven(int userId) throws SQLException {
         List<Feedback> feedbackList = new ArrayList<>();
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_FEEDBACK_GIVEN_BY_USER)) {
             
@@ -123,12 +170,14 @@ public class FeedbackDAOImpl implements FeedbackDAO {
             LOGGER.log(Level.SEVERE, "Error getting feedback given by user: " + userId, e);
             throw e;
         }
+        
         return feedbackList;
     }
 
     @Override
-    public List<Feedback> getFeedbackReceivedByUser(int userId) throws SQLException {
+    public List<Feedback> getFeedbackReceived(int userId) throws SQLException {
         List<Feedback> feedbackList = new ArrayList<>();
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_FEEDBACK_RECEIVED_BY_USER)) {
             
@@ -144,6 +193,7 @@ public class FeedbackDAOImpl implements FeedbackDAO {
             LOGGER.log(Level.SEVERE, "Error getting feedback received by user: " + userId, e);
             throw e;
         }
+        
         return feedbackList;
     }
 
@@ -158,7 +208,7 @@ public class FeedbackDAOImpl implements FeedbackDAO {
             
             int rowsAffected = preparedStatement.executeUpdate();
             
-            LOGGER.log(Level.INFO, "Feedback updated: ID {0}, Rows affected: {1}", 
+            LOGGER.log(Level.INFO, "Feedback updated: ID {0}, Rows affected: {1}",
                     new Object[]{feedback.getFeedbackId(), rowsAffected});
             
             return rowsAffected > 0;
@@ -177,7 +227,7 @@ public class FeedbackDAOImpl implements FeedbackDAO {
             
             int rowsAffected = preparedStatement.executeUpdate();
             
-            LOGGER.log(Level.INFO, "Feedback deleted: ID {0}, Rows affected: {1}", 
+            LOGGER.log(Level.INFO, "Feedback deleted: ID {0}, Rows affected: {1}",
                     new Object[]{feedbackId, rowsAffected});
             
             return rowsAffected > 0;
@@ -198,6 +248,7 @@ public class FeedbackDAOImpl implements FeedbackDAO {
                 if (resultSet.next()) {
                     return resultSet.getDouble(1);
                 }
+                
                 return 0;
             }
         } catch (SQLException e) {
@@ -218,6 +269,7 @@ public class FeedbackDAOImpl implements FeedbackDAO {
                 if (resultSet.next()) {
                     return resultSet.getInt(1) > 0;
                 }
+                
                 return false;
             }
         } catch (SQLException e) {
@@ -225,10 +277,10 @@ public class FeedbackDAOImpl implements FeedbackDAO {
             throw e;
         }
     }
-    
+
     /**
      * Extracts a Feedback object from a ResultSet
-     * 
+     *
      * @param resultSet The ResultSet containing feedback data
      * @return The extracted Feedback object
      * @throws SQLException if a database error occurs
@@ -241,7 +293,11 @@ public class FeedbackDAOImpl implements FeedbackDAO {
         feedback.setToUserId(resultSet.getInt("toUserId"));
         feedback.setRating(resultSet.getInt("rating"));
         feedback.setComment(resultSet.getString("comment"));
-        feedback.setFeedbackDate(resultSet.getTimestamp("feedbackDate"));
+        
+        Timestamp feedbackDate = resultSet.getTimestamp("feedbackDate");
+        if (feedbackDate != null) {
+            feedback.setFeedbackDate(feedbackDate);
+        }
         
         // Set additional display fields
         feedback.setFromUsername(resultSet.getString("fromUsername"));

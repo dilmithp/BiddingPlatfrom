@@ -81,4 +81,14 @@ public class CategoryServiceImpl implements CategoryService {
             throw e;
         }
     }
+    
+    @Override
+    public List<Category> getAllCategoriesWithItemCount() throws SQLException {
+        try {
+            return categoryDAO.getAllCategoriesWithItemCount();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting categories with item count", e);
+            throw e;
+        }
+    }
 }

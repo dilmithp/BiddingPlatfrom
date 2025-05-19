@@ -182,7 +182,7 @@ public class ItemServiceImpl implements ItemService {
             throw e;
         }
     }
-    
+
     @Override
     public List<Item> getActiveItemsBySeller(int sellerId) throws SQLException {
         try {
@@ -192,13 +192,43 @@ public class ItemServiceImpl implements ItemService {
             throw e;
         }
     }
-    
+
     @Override
     public int getActiveItemCountBySeller(int sellerId) throws SQLException {
         try {
             return itemDAO.getActiveItemCountBySeller(sellerId);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error getting active item count by seller: " + sellerId, e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public List<Item> getFeaturedItems(int limit) throws SQLException {
+        try {
+            return itemDAO.getFeaturedItems(limit);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting featured items with limit " + limit, e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public List<Item> getNewItems(int limit) throws SQLException {
+        try {
+            return itemDAO.getNewItems(limit);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting new items with limit " + limit, e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public List<Item> getSimilarItems(int itemId, int limit) throws SQLException {
+        try {
+            return itemDAO.getSimilarItems(itemId, limit);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting similar items for item " + itemId, e);
             throw e;
         }
     }

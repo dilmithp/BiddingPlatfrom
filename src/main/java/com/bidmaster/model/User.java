@@ -12,6 +12,9 @@ public class User {
     private String role;
     private String profileImage;
     private Timestamp registrationDate;
+    private double rating;
+    private int ratingCount;
+    private int itemsSold;
     
     // Default constructor
     public User() {
@@ -112,6 +115,29 @@ public class User {
     
     public void setRegistrationDate(Timestamp registrationDate) {
         this.registrationDate = registrationDate;
+    }
+    public double getRating() {
+        return rating;
+    }
+    
+    public void setRating(double rating) {
+        this.rating = rating;
+    }
+    
+    public int getRatingCount() {
+        return ratingCount;
+    }
+    
+    public void setRatingCount(int ratingCount) {
+        this.ratingCount = ratingCount;
+    }
+    
+    public int getItemsSold() {
+        return itemsSold;
+    }
+    
+    public void setItemsSold(int itemsSold) {
+        this.itemsSold = itemsSold;
     }
     
     @Override

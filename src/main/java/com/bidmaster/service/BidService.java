@@ -20,6 +20,15 @@ public interface BidService {
      * @throws SQLException if a database error occurs
      */
     int placeBid(int itemId, int bidderId, BigDecimal bidAmount) throws SQLException;
+    
+    /**
+     * Places a bid
+     * 
+     * @param bid The bid to place
+     * @return The ID of the created bid
+     * @throws SQLException if a database error occurs
+     */
+    int placeBid(Bid bid) throws SQLException;
 
     /**
      * Gets a bid by its ID
@@ -109,7 +118,7 @@ public interface BidService {
      * @throws SQLException if a database error occurs
      */
     int getNewBidCount(int days) throws SQLException;
-    
+
     /**
      * Gets recent bids for items from a specific seller
      *
@@ -119,7 +128,7 @@ public interface BidService {
      * @throws SQLException if a database error occurs
      */
     List<Bid> getRecentBidsForSeller(int sellerId, int limit) throws SQLException;
-    
+
     /**
      * Gets the total count of bids received on a seller's items
      *
@@ -128,4 +137,23 @@ public interface BidService {
      * @throws SQLException if a database error occurs
      */
     int getTotalBidsCountForSeller(int sellerId) throws SQLException;
+    
+    /**
+     * Updates previous highest bid status to 'outbid'
+     *
+     * @param itemId The item ID
+     * @param newBidId The ID of the new highest bid
+     * @return true if successful, false otherwise
+     * @throws SQLException if a database error occurs
+     */
+    boolean updatePreviousHighestBid(int itemId, int newBidId) throws SQLException;
+    /**
+     * Updates a bid
+     * 
+     * @param bid The bid to update
+     * @return true if successful, false otherwise
+     * @throws SQLException if a database error occurs
+     */
+    boolean updateBid(Bid bid) throws SQLException;
+
 }

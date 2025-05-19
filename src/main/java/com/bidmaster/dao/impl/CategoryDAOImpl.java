@@ -14,19 +14,34 @@ import com.bidmaster.dao.CategoryDAO;
 import com.bidmaster.model.Category;
 import com.bidmaster.util.DBConnectionUtil;
 
-/**
- * Implementation of CategoryDAO interface
- */
 public class CategoryDAOImpl implements CategoryDAO {
     private static final Logger LOGGER = Logger.getLogger(CategoryDAOImpl.class.getName());
     
-    private static final String INSERT_CATEGORY = "INSERT INTO Categories (categoryName, description, parentCategoryId) VALUES (?, ?, ?)";
-    private static final String GET_CATEGORY_BY_ID = "SELECT c.*, p.categoryName as parentCategoryName FROM Categories c LEFT JOIN Categories p ON c.parentCategoryId = p.categoryId WHERE c.categoryId = ?";
-    private static final String GET_ALL_CATEGORIES = "SELECT c.*, p.categoryName as parentCategoryName FROM Categories c LEFT JOIN Categories p ON c.parentCategoryId = p.categoryId ORDER BY c.categoryName";
-    private static final String GET_SUBCATEGORIES = "SELECT * FROM Categories WHERE parentCategoryId = ? ORDER BY categoryName";
-    private static final String UPDATE_CATEGORY = "UPDATE Categories SET categoryName = ?, description = ?, parentCategoryId = ? WHERE categoryId = ?";
-    private static final String DELETE_CATEGORY = "DELETE FROM Categories WHERE categoryId = ?";
-    private static final String CHECK_CATEGORY_USAGE = "SELECT COUNT(*) FROM Items WHERE categoryId = ?";
+    // SQL queries
+    private static final String INSERT_CATEGORY = 
+        "INSERT INTO Categories (categoryName, description, parentCategoryId) VALUES (?, ?, ?)";
+    
+    private static final String GET_CATEGORY_BY_ID = 
+        "SELECT * FROM Categories WHERE categoryId = ?";
+    
+    private static final String GET_ALL_CATEGORIES = 
+        "SELECT * FROM Categories ORDER BY categoryName";
+    
+    private static final String GET_SUBCATEGORIES = 
+        "SELECT * FROM Categories WHERE parentCategoryId = ? ORDER BY categoryName";
+    
+    private static final String UPDATE_CATEGORY = 
+        "UPDATE Categories SET categoryName = ?, description = ?, parentCategoryId = ? WHERE categoryId = ?";
+    
+    private static final String DELETE_CATEGORY = 
+        "DELETE FROM Categories WHERE categoryId = ?";
+    
+    private static final String GET_ALL_CATEGORIES_WITH_ITEM_COUNT = 
+        "SELECT c.*, COUNT(i.itemId) AS itemCount " +
+        "FROM Categories c " +
+        "LEFT JOIN Items i ON c.categoryId = i.categoryId AND i.status = 'active' " +
+        "GROUP BY c.categoryId " +
+        "ORDER BY c.categoryName";
 
     @Override
     public int insertCategory(Category category) throws SQLException {
@@ -36,7 +51,7 @@ public class CategoryDAOImpl implements CategoryDAO {
             preparedStatement.setString(1, category.getCategoryName());
             preparedStatement.setString(2, category.getDescription());
             
-            if (category.getParentCategoryId() != null) {
+            if (category.getParentCategoryId() != null && category.getParentCategoryId() > 0) {
                 preparedStatement.setInt(3, category.getParentCategoryId());
             } else {
                 preparedStatement.setNull(3, java.sql.Types.INTEGER);
@@ -67,7 +82,6 @@ public class CategoryDAOImpl implements CategoryDAO {
 
     @Override
     public Category getCategoryById(int categoryId) throws SQLException {
-        Category category = null;
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_CATEGORY_BY_ID)) {
             
@@ -75,47 +89,41 @@ public class CategoryDAOImpl implements CategoryDAO {
             
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    category = extractCategoryFromResultSet(resultSet);
-                    category.setParentCategoryName(resultSet.getString("parentCategoryName"));
-                    
-                    // Get subcategories
-                    List<Category> subcategories = getSubcategories(categoryId);
-                    category.setSubcategories(subcategories);
+                    return extractCategoryFromResultSet(resultSet);
                 }
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error getting category by ID: " + categoryId, e);
             throw e;
         }
-        return category;
+        
+        return null;
     }
 
     @Override
     public List<Category> getAllCategories() throws SQLException {
         List<Category> categories = new ArrayList<>();
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_ALL_CATEGORIES);
              ResultSet resultSet = preparedStatement.executeQuery()) {
             
             while (resultSet.next()) {
                 Category category = extractCategoryFromResultSet(resultSet);
-                category.setParentCategoryName(resultSet.getString("parentCategoryName"));
                 categories.add(category);
             }
-            
-            // Build category hierarchy
-            buildCategoryHierarchy(categories);
-            
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error getting all categories", e);
             throw e;
         }
+        
         return categories;
     }
 
     @Override
     public List<Category> getSubcategories(int parentCategoryId) throws SQLException {
         List<Category> subcategories = new ArrayList<>();
+        
         try (Connection connection = DBConnectionUtil.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(GET_SUBCATEGORIES)) {
             
@@ -128,9 +136,10 @@ public class CategoryDAOImpl implements CategoryDAO {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error getting subcategories for parent: " + parentCategoryId, e);
+            LOGGER.log(Level.SEVERE, "Error getting subcategories for parent ID: " + parentCategoryId, e);
             throw e;
         }
+        
         return subcategories;
     }
 
@@ -142,7 +151,7 @@ public class CategoryDAOImpl implements CategoryDAO {
             preparedStatement.setString(1, category.getCategoryName());
             preparedStatement.setString(2, category.getDescription());
             
-            if (category.getParentCategoryId() != null) {
+            if (category.getParentCategoryId() != null && category.getParentCategoryId() > 0) {
                 preparedStatement.setInt(3, category.getParentCategoryId());
             } else {
                 preparedStatement.setNull(3, java.sql.Types.INTEGER);
@@ -153,7 +162,7 @@ public class CategoryDAOImpl implements CategoryDAO {
             int rowsAffected = preparedStatement.executeUpdate();
             
             LOGGER.log(Level.INFO, "Category updated: {0}, Rows affected: {1}", 
-                    new Object[]{category.getCategoryName(), rowsAffected});
+                    new Object[]{category.getCategoryId(), rowsAffected});
             
             return rowsAffected > 0;
         } catch (SQLException e) {
@@ -164,68 +173,48 @@ public class CategoryDAOImpl implements CategoryDAO {
 
     @Override
     public boolean deleteCategory(int categoryId) throws SQLException {
-        Connection connection = null;
-        try {
-            connection = DBConnectionUtil.getConnection();
-            connection.setAutoCommit(false);
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(DELETE_CATEGORY)) {
             
-            // Check if category is in use
-            try (PreparedStatement checkStatement = connection.prepareStatement(CHECK_CATEGORY_USAGE)) {
-                checkStatement.setInt(1, categoryId);
-                try (ResultSet resultSet = checkStatement.executeQuery()) {
-                    if (resultSet.next() && resultSet.getInt(1) > 0) {
-                        // Category is in use, cannot delete
-                        connection.rollback();
-                        LOGGER.log(Level.WARNING, "Cannot delete category {0} because it is in use", categoryId);
-                        return false;
-                    }
-                }
-            }
+            preparedStatement.setInt(1, categoryId);
             
-            // Check if category has subcategories
-            List<Category> subcategories = getSubcategories(categoryId);
-            if (!subcategories.isEmpty()) {
-                // Category has subcategories, cannot delete
-                connection.rollback();
-                LOGGER.log(Level.WARNING, "Cannot delete category {0} because it has subcategories", categoryId);
-                return false;
-            }
+            int rowsAffected = preparedStatement.executeUpdate();
             
-            // Delete the category
-            try (PreparedStatement deleteStatement = connection.prepareStatement(DELETE_CATEGORY)) {
-                deleteStatement.setInt(1, categoryId);
-                int rowsAffected = deleteStatement.executeUpdate();
-                
-                if (rowsAffected > 0) {
-                    connection.commit();
-                    LOGGER.log(Level.INFO, "Category deleted: ID {0}, Rows affected: {1}", 
-                            new Object[]{categoryId, rowsAffected});
-                    return true;
-                } else {
-                    connection.rollback();
-                    return false;
-                }
-            }
+            LOGGER.log(Level.INFO, "Category deleted: {0}, Rows affected: {1}", 
+                    new Object[]{categoryId, rowsAffected});
+            
+            return rowsAffected > 0;
         } catch (SQLException e) {
-            if (connection != null) {
-                try {
-                    connection.rollback();
-                } catch (SQLException ex) {
-                    LOGGER.log(Level.SEVERE, "Error rolling back transaction", ex);
-                }
-            }
             LOGGER.log(Level.SEVERE, "Error deleting category: " + categoryId, e);
             throw e;
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.setAutoCommit(true);
-                    connection.close();
-                } catch (SQLException e) {
-                    LOGGER.log(Level.SEVERE, "Error closing connection", e);
-                }
-            }
         }
+    }
+    
+    @Override
+    public List<Category> getAllCategoriesWithItemCount() throws SQLException {
+        List<Category> categories = new ArrayList<>();
+        
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(GET_ALL_CATEGORIES_WITH_ITEM_COUNT);
+             ResultSet resultSet = preparedStatement.executeQuery()) {
+            
+            while (resultSet.next()) {
+                Category category = extractCategoryFromResultSet(resultSet);
+                
+                // Add item count
+                category.setItemCount(resultSet.getInt("itemCount"));
+                
+                // Set a default icon since it's not in the database
+                category.setIcon("fa-tag");
+                
+                categories.add(category);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting categories with item count", e);
+            throw e;
+        }
+        
+        return categories;
     }
     
     /**
@@ -246,25 +235,9 @@ public class CategoryDAOImpl implements CategoryDAO {
             category.setParentCategoryId(parentCategoryId);
         }
         
+        // Set default icon since it's not in the database
+        category.setIcon("fa-tag");
+        
         return category;
-    }
-    
-    /**
-     * Builds the category hierarchy by setting subcategories
-     * 
-     * @param categories The list of all categories
-     */
-    private void buildCategoryHierarchy(List<Category> categories) {
-        // Create a map of parent categories
-        for (Category category : categories) {
-            if (category.getParentCategoryId() != null) {
-                for (Category parentCategory : categories) {
-                    if (parentCategory.getCategoryId() == category.getParentCategoryId()) {
-                        parentCategory.addSubcategory(category);
-                        break;
-                    }
-                }
-            }
-        }
     }
 }

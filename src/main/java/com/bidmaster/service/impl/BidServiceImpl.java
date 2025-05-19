@@ -74,6 +74,11 @@ public class BidServiceImpl implements BidService {
             throw e;
         }
     }
+    
+    @Override
+    public int placeBid(Bid bid) throws SQLException {
+        return placeBid(bid.getItemId(), bid.getBidderId(), bid.getBidAmount());
+    }
 
     @Override
     public Bid getBidById(int bidId) throws SQLException {
@@ -207,7 +212,7 @@ public class BidServiceImpl implements BidService {
             throw e;
         }
     }
-    
+
     @Override
     public List<Bid> getRecentBidsForSeller(int sellerId, int limit) throws SQLException {
         try {
@@ -217,7 +222,7 @@ public class BidServiceImpl implements BidService {
             throw e;
         }
     }
-    
+
     @Override
     public int getTotalBidsCountForSeller(int sellerId) throws SQLException {
         try {
@@ -227,4 +232,47 @@ public class BidServiceImpl implements BidService {
             throw e;
         }
     }
+    
+    @Override
+    public boolean updatePreviousHighestBid(int itemId, int newBidId) throws SQLException {
+        try {
+            return bidDAO.updatePreviousHighestBid(itemId, newBidId);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error updating previous highest bid", e);
+            throw e;
+        }
+    }
+    @Override
+    public boolean updateBid(Bid bid) throws SQLException {
+        try {
+            // Get the item to check if bidding is allowed
+            Item item = itemDAO.getItemById(bid.getItemId());
+            
+            if (item == null) {
+                throw new SQLException("Item not found");
+            }
+            
+            // Check if item is active
+            if (!"active".equals(item.getStatus())) {
+                throw new SQLException("Bidding is not allowed on this item");
+            }
+            
+            // Update the bid
+            boolean result = bidDAO.updateBid(bid);
+            
+            if (result) {
+                // Update the current price of the item
+                itemDAO.updateCurrentPrice(bid.getItemId(), bid.getBidAmount().doubleValue());
+                
+                LOGGER.log(Level.INFO, "Bid updated successfully: ID {0}, Amount: {1}", 
+                        new Object[]{bid.getBidId(), bid.getBidAmount()});
+            }
+            
+            return result;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error updating bid", e);
+            throw e;
+        }
+    }
+
 }

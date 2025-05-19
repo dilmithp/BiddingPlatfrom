@@ -1,7 +1,6 @@
 package com.bidmaster.model;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 public class Item {
@@ -18,160 +17,125 @@ public class Item {
     private LocalDateTime endTime;
     private String status;
     private LocalDateTime createdAt;
-    private String sellerUsername;
+    
+    // Additional fields for display
     private String categoryName;
+    private String sellerUsername;
     private int bidCount;
-
-    // Default constructor
+    
+    // Missing properties referenced in item-details.jsp
+    private String condition;
+    private String location;
+    private String shippingInfo;
+    private String paymentMethods;
+    
+    // Constructors
     public Item() {
     }
-
-    // Parameterized constructor
-    public Item(String title, String description, BigDecimal startingPrice, BigDecimal reservePrice,
-            String imageUrl, int categoryId, int sellerId, LocalDateTime startTime, LocalDateTime endTime) {
-        this.title = title;
-        this.description = description;
-        this.startingPrice = startingPrice;
-        this.reservePrice = reservePrice;
-        this.currentPrice = startingPrice;
-        this.imageUrl = imageUrl;
-        this.categoryId = categoryId;
-        this.sellerId = sellerId;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.status = "pending";
-    }
-
-    // Constructor with itemId
-    public Item(int itemId, String title, String description, BigDecimal startingPrice, BigDecimal reservePrice,
-            BigDecimal currentPrice, String imageUrl, int categoryId, int sellerId, LocalDateTime startTime,
-            LocalDateTime endTime, String status, Timestamp createdAt) {
-        this.itemId = itemId;
-        this.title = title;
-        this.description = description;
-        this.startingPrice = startingPrice;
-        this.reservePrice = reservePrice;
-        this.currentPrice = currentPrice;
-        this.imageUrl = imageUrl;
-        this.categoryId = categoryId;
-        this.sellerId = sellerId;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.status = status;
-        this.createdAt = createdAt != null ? createdAt.toLocalDateTime() : null;
-    }
-
+    
     // Getters and Setters
     public int getItemId() {
         return itemId;
     }
-
+    
     public void setItemId(int itemId) {
         this.itemId = itemId;
     }
-
+    
     public String getTitle() {
         return title;
     }
-
+    
     public void setTitle(String title) {
         this.title = title;
     }
-
+    
     public String getDescription() {
         return description;
     }
-
+    
     public void setDescription(String description) {
         this.description = description;
     }
-
+    
     public BigDecimal getStartingPrice() {
         return startingPrice;
     }
-
+    
     public void setStartingPrice(BigDecimal startingPrice) {
         this.startingPrice = startingPrice;
     }
-
+    
     public BigDecimal getReservePrice() {
         return reservePrice;
     }
-
+    
     public void setReservePrice(BigDecimal reservePrice) {
         this.reservePrice = reservePrice;
     }
-
+    
     public BigDecimal getCurrentPrice() {
         return currentPrice;
     }
-
+    
     public void setCurrentPrice(BigDecimal currentPrice) {
         this.currentPrice = currentPrice;
     }
-
+    
     public String getImageUrl() {
         return imageUrl;
     }
-
+    
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
     }
-
+    
     public int getCategoryId() {
         return categoryId;
     }
-
+    
     public void setCategoryId(int categoryId) {
         this.categoryId = categoryId;
     }
-
+    
     public int getSellerId() {
         return sellerId;
     }
-
+    
     public void setSellerId(int sellerId) {
         this.sellerId = sellerId;
     }
-
+    
     public LocalDateTime getStartTime() {
         return startTime;
     }
-
+    
     public void setStartTime(LocalDateTime startTime) {
         this.startTime = startTime;
     }
-
+    
     public LocalDateTime getEndTime() {
         return endTime;
     }
-
+    
     public void setEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
     }
-
+    
     public String getStatus() {
         return status;
     }
-
+    
     public void setStatus(String status) {
         this.status = status;
     }
-
+    
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
-
+    
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public String getSellerUsername() {
-        return sellerUsername;
-    }
-
-    public void setSellerUsername(String sellerUsername) {
-        this.sellerUsername = sellerUsername;
     }
     
     public String getCategoryName() {
@@ -182,6 +146,14 @@ public class Item {
         this.categoryName = categoryName;
     }
     
+    public String getSellerUsername() {
+        return sellerUsername;
+    }
+    
+    public void setSellerUsername(String sellerUsername) {
+        this.sellerUsername = sellerUsername;
+    }
+    
     public int getBidCount() {
         return bidCount;
     }
@@ -189,29 +161,48 @@ public class Item {
     public void setBidCount(int bidCount) {
         this.bidCount = bidCount;
     }
-
-    // Business logic methods
-    public boolean isActive() {
-        LocalDateTime now = LocalDateTime.now();
-        return status.equals("active") && now.isAfter(startTime) && now.isBefore(endTime);
+    
+    // New getters and setters for the missing properties
+    public String getCondition() {
+        return condition;
     }
-
-    public boolean isEnded() {
-        return LocalDateTime.now().isAfter(endTime);
+    
+    public void setCondition(String condition) {
+        this.condition = condition;
     }
-
-    public boolean isReserveMet() {
-        return reservePrice == null || currentPrice.compareTo(reservePrice) >= 0;
+    
+    public String getLocation() {
+        return location;
     }
-
+    
+    public void setLocation(String location) {
+        this.location = location;
+    }
+    
+    public String getShippingInfo() {
+        return shippingInfo;
+    }
+    
+    public void setShippingInfo(String shippingInfo) {
+        this.shippingInfo = shippingInfo;
+    }
+    
+    public String getPaymentMethods() {
+        return paymentMethods;
+    }
+    
+    public void setPaymentMethods(String paymentMethods) {
+        this.paymentMethods = paymentMethods;
+    }
+    
     @Override
     public String toString() {
         return "Item{" +
                 "itemId=" + itemId +
                 ", title='" + title + '\'' +
+                ", startingPrice=" + startingPrice +
                 ", currentPrice=" + currentPrice +
                 ", status='" + status + '\'' +
-                ", endTime=" + endTime +
                 '}';
     }
 }

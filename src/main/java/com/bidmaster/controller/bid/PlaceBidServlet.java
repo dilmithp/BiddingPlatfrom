@@ -108,13 +108,15 @@ public class PlaceBidServlet extends HttpServlet {
                 // Update previous highest bid status to 'outbid'
                 bidService.updatePreviousHighestBid(itemId, bidId);
                 
-                request.setAttribute("successMessage", "Your bid of $" + bidAmount + " has been placed successfully!");
+                // Set success message in session to survive the redirect
+                session.setAttribute("successMessage", "Your bid of $" + bidAmount + " has been placed successfully!");
+                
+                // Redirect back to item details
+                response.sendRedirect("ItemDetailsServlet?id=" + itemId);
             } else {
                 request.setAttribute("errorMessage", "Failed to place bid. Please try again.");
+                request.getRequestDispatcher("ItemDetailsServlet?id=" + itemId).forward(request, response);
             }
-            
-            // Redirect back to item details
-            request.getRequestDispatcher("ItemDetailsServlet?id=" + itemId).forward(request, response);
             
         } catch (NumberFormatException e) {
             LOGGER.log(Level.SEVERE, "Invalid input format", e);
@@ -123,6 +125,10 @@ public class PlaceBidServlet extends HttpServlet {
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Database error in PlaceBidServlet", e);
             request.setAttribute("errorMessage", "Database error: " + e.getMessage());
+            request.getRequestDispatcher("error.jsp").forward(request, response);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Unexpected error in PlaceBidServlet", e);
+            request.setAttribute("errorMessage", "Unexpected error: " + e.getMessage());
             request.getRequestDispatcher("error.jsp").forward(request, response);
         }
     }

@@ -151,7 +151,7 @@ public interface ItemService {
      * @throws SQLException if a database error occurs
      */
     List<Item> getRecentItems(int limit) throws SQLException;
-    
+
     /**
      * Gets active items by seller
      *
@@ -160,7 +160,7 @@ public interface ItemService {
      * @throws SQLException if a database error occurs
      */
     List<Item> getActiveItemsBySeller(int sellerId) throws SQLException;
-    
+
     /**
      * Gets the count of active items by seller
      *
@@ -169,4 +169,32 @@ public interface ItemService {
      * @throws SQLException if a database error occurs
      */
     int getActiveItemCountBySeller(int sellerId) throws SQLException;
+    
+    /**
+     * Gets featured items
+     *
+     * @param limit The maximum number of items to return
+     * @return List of featured items
+     * @throws SQLException if a database error occurs
+     */
+    List<Item> getFeaturedItems(int limit) throws SQLException;
+    
+    /**
+     * Gets new items
+     *
+     * @param limit The maximum number of items to return
+     * @return List of new items
+     * @throws SQLException if a database error occurs
+     */
+    List<Item> getNewItems(int limit) throws SQLException;
+    
+    /**
+     * Gets similar items
+     *
+     * @param itemId The item ID
+     * @param limit The maximum number of items to return
+     * @return List of similar items
+     * @throws SQLException if a database error occurs
+     */
+    List<Item> getSimilarItems(int itemId, int limit) throws SQLException;
 }

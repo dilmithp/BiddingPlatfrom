@@ -1,19 +1,24 @@
 package com.bidmaster.model;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 public class Bid {
     private int bidId;
     private int itemId;
     private int bidderId;
     private BigDecimal bidAmount;
-    private Timestamp bidTime;
+    private LocalDateTime bidTime;
     private String status;
     
     // Additional fields for display purposes
     private String bidderUsername;
     private String itemTitle;
+    private String itemImageUrl;
+    private BigDecimal currentPrice;
+    private LocalDateTime endTime;
+    private String itemStatus;
+    private String sellerUsername;
     
     // Default constructor
     public Bid() {
@@ -28,7 +33,7 @@ public class Bid {
     }
     
     // Constructor with bidId
-    public Bid(int bidId, int itemId, int bidderId, BigDecimal bidAmount, Timestamp bidTime, String status) {
+    public Bid(int bidId, int itemId, int bidderId, BigDecimal bidAmount, LocalDateTime bidTime, String status) {
         this.bidId = bidId;
         this.itemId = itemId;
         this.bidderId = bidderId;
@@ -70,11 +75,11 @@ public class Bid {
         this.bidAmount = bidAmount;
     }
     
-    public Timestamp getBidTime() {
+    public LocalDateTime getBidTime() {
         return bidTime;
     }
     
-    public void setBidTime(Timestamp bidTime) {
+    public void setBidTime(LocalDateTime bidTime) {
         this.bidTime = bidTime;
     }
     
@@ -100,6 +105,46 @@ public class Bid {
     
     public void setItemTitle(String itemTitle) {
         this.itemTitle = itemTitle;
+    }
+    
+    public String getItemImageUrl() {
+        return itemImageUrl;
+    }
+    
+    public void setItemImageUrl(String itemImageUrl) {
+        this.itemImageUrl = itemImageUrl;
+    }
+    
+    public BigDecimal getCurrentPrice() {
+        return currentPrice;
+    }
+    
+    public void setCurrentPrice(BigDecimal currentPrice) {
+        this.currentPrice = currentPrice;
+    }
+    
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+    
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+    
+    public String getItemStatus() {
+        return itemStatus;
+    }
+    
+    public void setItemStatus(String itemStatus) {
+        this.itemStatus = itemStatus;
+    }
+    
+    public String getSellerUsername() {
+        return sellerUsername;
+    }
+    
+    public void setSellerUsername(String sellerUsername) {
+        this.sellerUsername = sellerUsername;
     }
     
     @Override

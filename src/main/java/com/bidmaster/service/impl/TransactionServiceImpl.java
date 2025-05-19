@@ -141,33 +141,53 @@ public class TransactionServiceImpl implements TransactionService {
             throw e;
         }
     }
-    
+
     @Override
     public List<Transaction> getCompletedSalesBySeller(int sellerId) throws SQLException {
         try {
             return transactionDAO.getCompletedSalesBySeller(sellerId);
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error getting completed sales by seller: " + sellerId, e);
+            LOGGER.log(Level.SEVERE, "Error getting completed sales by seller", e);
             throw e;
         }
     }
-    
+
     @Override
     public int getCompletedSalesCountBySeller(int sellerId) throws SQLException {
         try {
             return transactionDAO.getCompletedSalesCountBySeller(sellerId);
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error getting completed sales count by seller: " + sellerId, e);
+            LOGGER.log(Level.SEVERE, "Error getting completed sales count by seller", e);
             throw e;
         }
     }
-    
+
     @Override
     public double getTotalRevenueBySeller(int sellerId) throws SQLException {
         try {
             return transactionDAO.getTotalRevenueBySeller(sellerId);
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error getting total revenue by seller: " + sellerId, e);
+            LOGGER.log(Level.SEVERE, "Error getting total revenue by seller", e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public List<Transaction> getTransactionsByUser(int userId) throws SQLException {
+        try {
+            // Get transactions where user is either buyer or seller
+            List<Transaction> buyerTransactions = transactionDAO.getTransactionsByBuyer(userId);
+            List<Transaction> sellerTransactions = transactionDAO.getTransactionsBySeller(userId);
+            
+            // Combine the lists
+            buyerTransactions.addAll(sellerTransactions);
+            
+            // Sort by transaction date (most recent first)
+            buyerTransactions.sort((t1, t2) -> t2.getTransactionDate().compareTo(t1.getTransactionDate()));
+            
+            return buyerTransactions;
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting transactions by user", e);
             throw e;
         }
     }

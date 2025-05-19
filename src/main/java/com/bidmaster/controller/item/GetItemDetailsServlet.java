@@ -34,6 +34,7 @@ public class GetItemDetailsServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        
         HttpSession session = request.getSession(false);
         
         // Check if user is logged in
@@ -61,6 +62,20 @@ public class GetItemDetailsServlet extends HttpServlet {
             if (item.getSellerId() != userId && !"admin".equals(userRole)) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 return;
+            }
+            
+            // Set default values for missing properties
+            if (item.getCondition() == null) {
+                item.setCondition("Not specified");
+            }
+            if (item.getLocation() == null) {
+                item.setLocation("Not specified");
+            }
+            if (item.getShippingInfo() == null) {
+                item.setShippingInfo("Contact seller for shipping details");
+            }
+            if (item.getPaymentMethods() == null) {
+                item.setPaymentMethods("Contact seller for payment options");
             }
             
             // Set response content type
