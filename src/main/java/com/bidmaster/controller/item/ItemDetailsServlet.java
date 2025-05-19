@@ -43,16 +43,15 @@ public class ItemDetailsServlet extends HttpServlet {
     }
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
         // Get success message from session if it exists
         HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute("successMessage") != null) {
             request.setAttribute("successMessage", session.getAttribute("successMessage"));
             session.removeAttribute("successMessage");
         }
-        
+
         try {
             // Get item ID from request parameter
             int itemId = Integer.parseInt(request.getParameter("id"));
@@ -70,12 +69,15 @@ public class ItemDetailsServlet extends HttpServlet {
             if (item.getCondition() == null) {
                 item.setCondition("Not specified");
             }
+            
             if (item.getLocation() == null) {
                 item.setLocation("Not specified");
             }
+            
             if (item.getShippingInfo() == null) {
                 item.setShippingInfo("Contact seller for shipping details");
             }
+            
             if (item.getPaymentMethods() == null) {
                 item.setPaymentMethods("Contact seller for payment options");
             }
@@ -85,6 +87,19 @@ public class ItemDetailsServlet extends HttpServlet {
             
             // Get seller info
             User sellerInfo = userService.getUserById(item.getSellerId());
+            
+            // Set default values for seller rating if needed
+            if (sellerInfo != null) {
+                if (sellerInfo.getRating() == 0) {
+                    sellerInfo.setRating(0);
+                }
+                if (sellerInfo.getRatingCount() == 0) {
+                    sellerInfo.setRatingCount(0);
+                }
+                if (sellerInfo.getItemsSold() == 0) {
+                    sellerInfo.setItemsSold(0);
+                }
+            }
             
             // Get similar items
             List<Item> similarItems = itemService.getSimilarItems(itemId, 4);
@@ -120,9 +135,9 @@ public class ItemDetailsServlet extends HttpServlet {
             request.getRequestDispatcher("error.jsp").forward(request, response);
         }
     }
-    
+
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         // Handle any POST requests by forwarding to doGet
         doGet(request, response);

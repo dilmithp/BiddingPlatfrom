@@ -35,7 +35,7 @@ public class UserBidsServlet extends HttpServlet {
     }
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
         HttpSession session = request.getSession(false);
@@ -64,9 +64,9 @@ public class UserBidsServlet extends HttpServlet {
             request.getRequestDispatcher("error.jsp").forward(request, response);
         }
     }
-    
+
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
         HttpSession session = request.getSession(false);
@@ -89,7 +89,7 @@ public class UserBidsServlet extends HttpServlet {
                 Bid bid = bidService.getBidById(bidId);
                 if (bid == null || bid.getBidderId() != userId) {
                     session.setAttribute("errorMessage", "You can only delete your own bids");
-                    response.sendRedirect("profile.jsp");
+                    response.sendRedirect("ProfileServlet");
                     return;
                 }
                 
@@ -111,7 +111,7 @@ public class UserBidsServlet extends HttpServlet {
                 Bid bid = bidService.getBidById(bidId);
                 if (bid == null || bid.getBidderId() != userId) {
                     session.setAttribute("errorMessage", "You can only update your own bids");
-                    response.sendRedirect("profile.jsp");
+                    response.sendRedirect("ProfileServlet");
                     return;
                 }
                 
@@ -121,7 +121,7 @@ public class UserBidsServlet extends HttpServlet {
                 // Check if new amount is higher than current price
                 if (newAmount.compareTo(item.getCurrentPrice()) <= 0) {
                     session.setAttribute("errorMessage", "New bid amount must be higher than current price");
-                    response.sendRedirect("profile.jsp");
+                    response.sendRedirect("ProfileServlet");
                     return;
                 }
                 
@@ -141,16 +141,16 @@ public class UserBidsServlet extends HttpServlet {
             }
             
             // Redirect back to profile
-            response.sendRedirect("profile.jsp");
+            response.sendRedirect("ProfileServlet");
             
         } catch (NumberFormatException e) {
             LOGGER.log(Level.SEVERE, "Invalid input format", e);
             session.setAttribute("errorMessage", "Invalid input. Please enter a valid bid amount.");
-            response.sendRedirect("profile.jsp");
+            response.sendRedirect("ProfileServlet");
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Database error in UserBidsServlet", e);
             session.setAttribute("errorMessage", "Database error: " + e.getMessage());
-            response.sendRedirect("profile.jsp");
+            response.sendRedirect("ProfileServlet");
         }
     }
 }

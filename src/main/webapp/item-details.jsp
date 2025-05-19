@@ -130,11 +130,11 @@
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>Condition:</span>
-                                        <span class="fw-bold">${item.condition}</span>
+                                        <span class="fw-bold">${item.condition != null ? item.condition : 'Not specified'}</span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>Location:</span>
-                                        <span class="fw-bold">${item.location}</span>
+                                        <span class="fw-bold">${item.location != null ? item.location : 'Not specified'}</span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>Seller:</span>
@@ -147,11 +147,29 @@
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>Starting Price:</span>
-                                        <span class="fw-bold">$<fmt:formatNumber value="${item.startingPrice}" pattern="#,##0.00"/></span>
+                                        <span class="fw-bold">
+                                            <c:choose>
+                                                <c:when test="${not empty item.startingPrice}">
+                                                    $<fmt:formatNumber value="${item.startingPrice}" pattern="#,##0.00"/>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    $0.00
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>Current Bid:</span>
-                                        <span class="fw-bold text-primary">$<fmt:formatNumber value="${item.currentPrice}" pattern="#,##0.00"/></span>
+                                        <span class="fw-bold text-primary">
+                                            <c:choose>
+                                                <c:when test="${not empty item.currentPrice}">
+                                                    $<fmt:formatNumber value="${item.currentPrice}" pattern="#,##0.00"/>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    $0.00
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>Bid Count:</span>
@@ -172,42 +190,47 @@
                     </div>
                 </div>
                 
-                <!-- Bid History -->
-                <div class="card shadow-sm mt-4">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">Bid History (${item.bidCount} bids)</h5>
-                    </div>
-                    <div class="card-body">
-                        <c:choose>
-                            <c:when test="${not empty bidHistory}">
-                                <div class="bid-history">
-                                    <c:forEach var="bid" items="${bidHistory}" varStatus="status">
-                                        <div class="bid-history-item ${status.index == 0 ? 'winning-bid' : ''}">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <span class="fw-bold">${bid.bidderUsername}</span>
-                                                    <c:if test="${status.index == 0}">
-                                                        <span class="badge bg-success ms-2">Highest Bid</span>
-                                                    </c:if>
-                                                </div>
-                                                <div class="text-end">
-                                                    <div class="fw-bold">$<fmt:formatNumber value="${bid.bidAmount}" pattern="#,##0.00"/></div>
-                                                    <small class="text-muted">
-                                                        <fmt:formatDate value="${bid.bidTime}" pattern="MMM dd, yyyy HH:mm" />
-                                                    </small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </c:forEach>
+<!-- Bid History -->
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Bid History (${item.bidCount} bids)</h5>
+    </div>
+    <div class="card-body">
+        <c:choose>
+            <c:when test="${not empty bidHistory}">
+                <div class="bid-history">
+                    <c:forEach var="bidItem" items="${bidHistory}" varStatus="status">
+                        <div class="bid-history-item ${status.index == 0 ? 'winning-bid' : ''}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-bold">${bidItem.bidderUsername}</span>
+                                    <c:if test="${status.index == 0}">
+                                        <span class="badge bg-success ms-2">Highest Bid</span>
+                                    </c:if>
                                 </div>
-                            </c:when>
-                            <c:otherwise>
-                                <p class="text-center text-muted">No bids yet. Be the first to bid!</p>
-                            </c:otherwise>
-                        </c:choose>
-                    </div>
+                                <div class="text-end">
+                                    <div class="fw-bold">
+                                        $${bidItem.bidAmount}
+                                    </div>
+                                    <small class="text-muted">
+                                        <c:if test="${bidItem.bidTime != null}">
+                                            ${bidItem.bidTime}
+                                        </c:if>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </c:forEach>
                 </div>
-            </div>
+            </c:when>
+            <c:otherwise>
+                <p class="text-center text-muted">No bids yet. Be the first to bid!</p>
+            </c:otherwise>
+        </c:choose>
+    </div>
+</div>
+
+
             
             <!-- Bid Section and Seller Info -->
             <div class="col-lg-4">
@@ -217,11 +240,29 @@
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span>Current Bid:</span>
-                            <span class="fw-bold text-primary fs-5">$<fmt:formatNumber value="${item.currentPrice}" pattern="#,##0.00"/></span>
+                            <span class="fw-bold text-primary fs-5">
+                                <c:choose>
+                                    <c:when test="${not empty item.currentPrice}">
+                                        $<fmt:formatNumber value="${item.currentPrice}" pattern="#,##0.00"/>
+                                    </c:when>
+                                    <c:otherwise>
+                                        $0.00
+                                    </c:otherwise>
+                                </c:choose>
+                            </span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span>Minimum Bid:</span>
-                            <span class="fw-bold">$<fmt:formatNumber value="${item.currentPrice + 1}" pattern="#,##0.00"/></span>
+                            <span class="fw-bold">
+                                <c:choose>
+                                    <c:when test="${not empty item.currentPrice}">
+                                        $<fmt:formatNumber value="${item.currentPrice + 1}" pattern="#,##0.00"/>
+                                    </c:when>
+                                    <c:otherwise>
+                                        $1.00
+                                    </c:otherwise>
+                                </c:choose>
+                            </span>
                         </div>
                     </div>
                     
@@ -232,7 +273,7 @@
                                 <div class="mb-3">
                                     <label for="bidAmount" class="form-label">Your Bid Amount ($)</label>
                                     <input type="number" class="form-control form-control-lg" id="bidAmount" name="bidAmount" 
-                                           min="${item.currentPrice + 1}" step="0.01" required>
+                                           min="${not empty item.currentPrice ? item.currentPrice + 1 : 1}" step="0.01" required>
                                     <div class="form-text">Enter an amount greater than the minimum bid</div>
                                 </div>
                                 <div class="d-grid gap-2">
@@ -281,34 +322,37 @@
                 <!-- Seller Info -->
                 <div class="seller-info mb-4">
                     <h4 class="mb-3">Seller Information</h4>
-                    <div class="d-flex align-items-center mb-3">
-                        <img src="${empty sellerInfo.profileImage ? 'assets/images/default-avatar.png' : sellerInfo.profileImage}" 
-                             alt="${sellerInfo.username}" class="rounded-circle me-3" width="60" height="60">
-                        <div>
-                            <h5 class="mb-1">${sellerInfo.username}</h5>
-                            <div class="text-muted">Member since <fmt:formatDate value="${sellerInfo.registrationDate}" pattern="MMM yyyy" /></div>
+                    <c:if test="${not empty sellerInfo}">
+                        <div class="d-flex align-items-center mb-3">
+                            <img src="${empty sellerInfo.profileImage ? 'assets/images/default-avatar.png' : sellerInfo.profileImage}" 
+                                 alt="${sellerInfo.username}" class="rounded-circle me-3" width="60" height="60">
+                            <div>
+                                <h5 class="mb-1">${sellerInfo.username}</h5>
+                                <div class="text-muted">Member since <fmt:formatDate value="${sellerInfo.registrationDate}" pattern="MMM yyyy" /></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Rating:</span>
-                            <span class="fw-bold">
-                                <c:forEach begin="1" end="5" var="i">
-                                    <i class="fas fa-star ${i <= sellerInfo.rating ? 'text-warning' : 'text-muted'}"></i>
-                                </c:forEach>
-                                (${sellerInfo.ratingCount})
-                            </span>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Rating:</span>
+                                <span class="fw-bold">
+                                    <c:set var="rating" value="${sellerInfo.rating > 0 ? sellerInfo.rating : 0}" />
+                                    <c:forEach begin="1" end="5" var="i">
+                                        <i class="fas fa-star ${i <= rating ? 'text-warning' : 'text-muted'}"></i>
+                                    </c:forEach>
+                                    (${sellerInfo.ratingCount > 0 ? sellerInfo.ratingCount : 0})
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Items Sold:</span>
+                                <span class="fw-bold">${sellerInfo.itemsSold > 0 ? sellerInfo.itemsSold : 0}</span>
+                            </div>
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Items Sold:</span>
-                            <span class="fw-bold">${sellerInfo.itemsSold}</span>
+                        <div class="d-grid">
+                            <a href="SellerProfileServlet?id=${item.sellerId}" class="btn btn-outline-primary">
+                                <i class="fas fa-user me-2"></i>View Seller Profile
+                            </a>
                         </div>
-                    </div>
-                    <div class="d-grid">
-                        <a href="SellerProfileServlet?id=${item.sellerId}" class="btn btn-outline-primary">
-                            <i class="fas fa-user me-2"></i>View Seller Profile
-                        </a>
-                    </div>
+                    </c:if>
                 </div>
                 
                 <!-- Shipping Info -->
@@ -319,11 +363,11 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <h6><i class="fas fa-truck me-2"></i>Shipping</h6>
-                            <p class="mb-0">${item.shippingInfo}</p>
+                            <p class="mb-0">${not empty item.shippingInfo ? item.shippingInfo : 'Contact seller for shipping details.'}</p>
                         </div>
                         <div>
                             <h6><i class="fas fa-credit-card me-2"></i>Payment Methods</h6>
-                            <p class="mb-0">${item.paymentMethods}</p>
+                            <p class="mb-0">${not empty item.paymentMethods ? item.paymentMethods : 'Contact seller for payment options.'}</p>
                         </div>
                     </div>
                 </div>
@@ -331,37 +375,48 @@
         </div>
         
         <!-- Similar Items -->
-        <section class="mt-5">
-            <h3 class="mb-4">Similar Items</h3>
-            <div class="row">
-                <c:forEach var="similarItem" items="${similarItems}">
-                    <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                        <div class="card similar-item-card">
-                            <img src="${empty similarItem.imageUrl ? 'assets/images/no-image.png' : similarItem.imageUrl}" 
-                                 class="card-img-top similar-item-img" alt="${similarItem.title}">
-                            <div class="card-body">
-                                <h5 class="card-title text-truncate">${similarItem.title}</h5>
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span>Current Bid:</span>
-                                    <span class="fw-bold">$<fmt:formatNumber value="${similarItem.currentPrice}" pattern="#,##0.00"/></span>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span>Ends in:</span>
-                                    <span class="countdown" data-end="${similarItem.endTime}">
-                                        ${similarItem.endTime.toLocalDate()} ${similarItem.endTime.toLocalTime().toString().substring(0, 5)}
-                                    </span>
-                                </div>
-                                <div class="d-grid">
-                                    <a href="ItemDetailsServlet?id=${similarItem.itemId}" class="btn btn-sm bid-btn text-white">
-                                        <i class="fas fa-gavel me-2"></i>Bid Now
-                                    </a>
+        <c:if test="${not empty similarItems}">
+            <section class="mt-5">
+                <h3 class="mb-4">Similar Items</h3>
+                <div class="row">
+                    <c:forEach var="similarItem" items="${similarItems}">
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                            <div class="card similar-item-card">
+                                <img src="${empty similarItem.imageUrl ? 'assets/images/no-image.png' : similarItem.imageUrl}" 
+                                     class="card-img-top similar-item-img" alt="${similarItem.title}">
+                                <div class="card-body">
+                                    <h5 class="card-title text-truncate">${similarItem.title}</h5>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span>Current Bid:</span>
+                                        <span class="fw-bold">
+                                            <c:choose>
+                                                <c:when test="${not empty similarItem.currentPrice}">
+                                                    $<fmt:formatNumber value="${similarItem.currentPrice}" pattern="#,##0.00"/>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    $0.00
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span>Ends in:</span>
+                                        <span class="countdown" data-end="${similarItem.endTime}">
+                                            ${similarItem.endTime.toLocalDate()} ${similarItem.endTime.toLocalTime().toString().substring(0, 5)}
+                                        </span>
+                                    </div>
+                                    <div class="d-grid">
+                                        <a href="ItemDetailsServlet?id=${similarItem.itemId}" class="btn btn-sm bid-btn text-white">
+                                            <i class="fas fa-gavel me-2"></i>Bid Now
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </c:forEach>
-            </div>
-        </section>
+                    </c:forEach>
+                </div>
+            </section>
+        </c:if>
     </div>
     
     <!-- Include Footer -->

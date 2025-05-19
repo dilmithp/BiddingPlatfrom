@@ -11,6 +11,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
     <!-- Custom CSS -->
     <style>
         .profile-header {
@@ -48,6 +50,12 @@
         .action-btn:hover {
             background-color: #2d4861;
             border-color: #2d4861;
+        }
+        .item-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -104,12 +112,14 @@
                     <i class="fas fa-heart me-2"></i>Watchlist
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="listings-tab" data-bs-toggle="pill" data-bs-target="#listings" 
-                        type="button" role="tab" aria-controls="listings" aria-selected="false">
-                    <i class="fas fa-box me-2"></i>My Listings
-                </button>
-            </li>
+            <c:if test="${user.role == 'seller' || user.role == 'admin'}">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="listings-tab" data-bs-toggle="pill" data-bs-target="#listings" 
+                            type="button" role="tab" aria-controls="listings" aria-selected="false">
+                        <i class="fas fa-box me-2"></i>My Listings
+                    </button>
+                </li>
+            </c:if>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="transactions-tab" data-bs-toggle="pill" data-bs-target="#transactions" 
                         type="button" role="tab" aria-controls="transactions" aria-selected="false">
@@ -117,9 +127,9 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="feedback-tab" data-bs-toggle="pill" data-bs-target="#feedback" 
-                        type="button" role="tab" aria-controls="feedback" aria-selected="false">
-                    <i class="fas fa-star me-2"></i>Feedback
+                <button class="nav-link" id="settings-tab" data-bs-toggle="pill" data-bs-target="#settings" 
+                        type="button" role="tab" aria-controls="settings" aria-selected="false">
+                    <i class="fas fa-cog me-2"></i>Settings
                 </button>
             </li>
         </ul>
@@ -136,13 +146,14 @@
                         <c:choose>
                             <c:when test="${not empty userBids}">
                                 <div class="table-responsive">
-                                    <table class="table table-hover">
+                                    <table class="table table-hover" id="userBidsTable">
                                         <thead>
                                             <tr>
                                                 <th>Item</th>
                                                 <th>Bid Amount</th>
-                                                <th>Bid Time</th>
+                                                <th>Current Price</th>
                                                 <th>Status</th>
+                                                <th>End Time</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -152,21 +163,26 @@
                                                     <td>
                                                         <div class="d-flex align-items-center">
                                                             <img src="${empty bid.itemImageUrl ? 'assets/images/no-image.png' : bid.itemImageUrl}" 
-                                                                 alt="${bid.itemTitle}" class="me-2" width="50" height="50" style="object-fit: cover;">
+                                                                 alt="${bid.itemTitle}" class="item-img me-3">
                                                             <div>
                                                                 <div class="fw-bold">${bid.itemTitle}</div>
                                                                 <small class="text-muted">Seller: ${bid.sellerUsername}</small>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td>$<fmt:formatNumber value="${bid.bidAmount}" pattern="#,##0.00"/></td>
-                                                    <td>
-                                                        <fmt:formatDate value="${bid.bidTime}" pattern="MMM dd, yyyy HH:mm" />
-                                                    </td>
+                                                    <td>$${bid.bidAmount}</td>
+                                                    <td>$${bid.currentPrice}</td>
                                                     <td>
                                                         <span class="badge ${bid.status == 'winning' ? 'badge-winning' : (bid.status == 'outbid' ? 'badge-outbid' : 'badge-active')}">
                                                             ${bid.status}
                                                         </span>
+                                                    </td>
+                                                    <td>
+                                                        <c:if test="${not empty bid.endTime}">
+                                                            <span class="countdown" data-end="${bid.endTime}">
+                                                                ${bid.endTime}
+                                                            </span>
+                                                        </c:if>
                                                     </td>
                                                     <td>
                                                         <div class="btn-group btn-group-sm">
@@ -215,7 +231,58 @@
                     <div class="card-body">
                         <c:choose>
                             <c:when test="${not empty watchlist}">
-                                <!-- Watchlist content -->
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="watchlistTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Item</th>
+                                                <th>Current Price</th>
+                                                <th>End Time</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <c:forEach var="item" items="${watchlist}">
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <img src="${empty item.itemImageUrl ? 'assets/images/no-image.png' : item.itemImageUrl}" 
+                                                                 alt="${item.itemTitle}" class="item-img me-3">
+                                                            <div>
+                                                                <div class="fw-bold">${item.itemTitle}</div>
+                                                                <small class="text-muted">Seller: ${item.sellerUsername}</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>$${item.currentPrice}</td>
+                                                    <td>
+                                                        <c:if test="${not empty item.endTime}">
+                                                            <span class="countdown" data-end="${item.endTime}">
+                                                                ${item.endTime}
+                                                            </span>
+                                                        </c:if>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge ${item.status == 'active' ? 'badge-active' : 'badge-outbid'}">
+                                                            ${item.status}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <a href="ItemDetailsServlet?id=${item.itemId}" class="btn action-btn text-white" title="View Item">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                            <a href="WatchlistServlet?action=remove&itemId=${item.itemId}" class="btn btn-danger" title="Remove from Watchlist">
+                                                                <i class="fas fa-trash"></i>
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </c:when>
                             <c:otherwise>
                                 <div class="text-center py-5">
@@ -235,20 +302,75 @@
             <!-- My Listings Tab -->
             <div class="tab-pane fade" id="listings" role="tabpanel" aria-labelledby="listings-tab">
                 <div class="card shadow-sm">
-                    <div class="card-header bg-white">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">My Listings</h5>
+                        <a href="seller-dashboard.jsp" class="btn btn-sm action-btn text-white">
+                            <i class="fas fa-tachometer-alt me-2"></i>Go to Seller Dashboard
+                        </a>
                     </div>
                     <div class="card-body">
                         <c:choose>
                             <c:when test="${not empty listings}">
-                                <!-- Listings content -->
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="listingsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Item</th>
+                                                <th>Current Price</th>
+                                                <th>Bids</th>
+                                                <th>End Time</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <c:forEach var="item" items="${listings}">
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <img src="${empty item.imageUrl ? 'assets/images/no-image.png' : item.imageUrl}" 
+                                                                 alt="${item.title}" class="item-img me-3">
+                                                            <div class="fw-bold">${item.title}</div>
+                                                        </div>
+                                                    </td>
+                                                    <td>$${item.currentPrice}</td>
+                                                    <td>${item.bidCount}</td>
+                                                    <td>
+                                                        <c:if test="${not empty item.endTime}">
+                                                            <span class="countdown" data-end="${item.endTime}">
+                                                                ${item.endTime}
+                                                            </span>
+                                                        </c:if>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge ${item.status == 'active' ? 'badge-active' : (item.status == 'pending' ? 'badge-outbid' : 'badge-winning')}">
+                                                            ${item.status}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <a href="ItemDetailsServlet?id=${item.itemId}" class="btn action-btn text-white" title="View">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                            <c:if test="${item.status != 'completed'}">
+                                                                <a href="EditItemServlet?id=${item.itemId}" class="btn btn-warning" title="Edit">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </a>
+                                                            </c:if>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </c:when>
                             <c:otherwise>
                                 <div class="text-center py-5">
                                     <i class="fas fa-box fa-4x text-muted mb-3"></i>
                                     <h5>You don't have any listings yet</h5>
                                     <p class="text-muted">Start selling by creating your first auction!</p>
-                                    <a href="CreateItemServlet" class="btn action-btn text-white mt-3">
+                                    <a href="create-item.jsp" class="btn action-btn text-white mt-3">
                                         <i class="fas fa-plus-circle me-2"></i>Create New Auction
                                     </a>
                                 </div>
@@ -267,7 +389,53 @@
                     <div class="card-body">
                         <c:choose>
                             <c:when test="${not empty transactions}">
-                                <!-- Transactions content -->
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="transactionsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Item</th>
+                                                <th>Role</th>
+                                                <th>Amount</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <c:forEach var="transaction" items="${transactions}">
+                                                <tr>
+                                                    <td>${transaction.itemTitle}</td>
+                                                    <td>
+                                                        <c:choose>
+                                                            <c:when test="${transaction.sellerId == user.userId}">
+                                                                <span class="badge bg-info">Seller</span>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <span class="badge bg-primary">Buyer</span>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </td>
+                                                    <td>$${transaction.amount}</td>
+                                                    <td>
+                                                        <c:if test="${not empty transaction.transactionDate}">
+                                                            <fmt:formatDate value="${transaction.transactionDate}" pattern="MMM dd, yyyy" />
+                                                        </c:if>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge ${transaction.status == 'completed' ? 'badge-winning' : (transaction.status == 'pending' ? 'badge-active' : 'badge-outbid')}">
+                                                            ${transaction.status}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <a href="TransactionDetailsServlet?id=${transaction.transactionId}" class="btn btn-sm action-btn text-white">
+                                                            <i class="fas fa-eye me-1"></i>Details
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </c:when>
                             <c:otherwise>
                                 <div class="text-center py-5">
@@ -284,97 +452,76 @@
                 </div>
             </div>
             
-            <!-- Feedback Tab -->
-            <div class="tab-pane fade" id="feedback" role="tabpanel" aria-labelledby="feedback-tab">
-                <div class="row">
-                    <!-- Feedback Received -->
-                    <div class="col-md-6 mb-4">
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header bg-white">
-                                <h5 class="card-title mb-0">Feedback Received</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="text-center mb-4">
-                                    <div class="display-4 fw-bold text-primary">
-                                        <fmt:formatNumber value="${userRating}" pattern="#.#" />
-                                    </div>
-                                    <div class="mb-2">
-                                        <c:forEach begin="1" end="5" var="i">
-                                            <i class="fas fa-star ${i <= userRating ? 'text-warning' : 'text-muted'}"></i>
-                                        </c:forEach>
-                                    </div>
-                                    <div class="text-muted">Based on ${feedbackReceived.size()} reviews</div>
-                                </div>
-                                
-                                <c:choose>
-                                    <c:when test="${not empty feedbackReceived}">
-                                        <c:forEach var="feedback" items="${feedbackReceived}">
-                                            <div class="border-bottom pb-3 mb-3">
-                                                <div class="d-flex justify-content-between mb-2">
-                                                    <div>
-                                                        <span class="fw-bold">${feedback.giverUsername}</span>
-                                                        <span class="text-muted ms-2">
-                                                            <fmt:formatDate value="${feedback.feedbackDate}" pattern="MMM dd, yyyy" />
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <c:forEach begin="1" end="5" var="i">
-                                                            <i class="fas fa-star ${i <= feedback.rating ? 'text-warning' : 'text-muted'}"></i>
-                                                        </c:forEach>
-                                                    </div>
-                                                </div>
-                                                <p class="mb-1">${feedback.comment}</p>
-                                                <small class="text-muted">Item: ${feedback.itemTitle}</small>
-                                            </div>
-                                        </c:forEach>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <div class="text-center py-3">
-                                            <p class="text-muted">Feedback from others will appear here</p>
-                                        </div>
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
-                        </div>
+            <!-- Settings Tab -->
+            <div class="tab-pane fade" id="settings" role="tabpanel" aria-labelledby="settings-tab">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">Account Settings</h5>
                     </div>
-                    
-                    <!-- Feedback Given -->
-                    <div class="col-md-6 mb-4">
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header bg-white">
-                                <h5 class="card-title mb-0">Feedback Given</h5>
-                            </div>
-                            <div class="card-body">
-                                <c:choose>
-                                    <c:when test="${not empty feedbackGiven}">
-                                        <c:forEach var="feedback" items="${feedbackGiven}">
-                                            <div class="border-bottom pb-3 mb-3">
-                                                <div class="d-flex justify-content-between mb-2">
-                                                    <div>
-                                                        <span class="fw-bold">To: ${feedback.receiverUsername}</span>
-                                                        <span class="text-muted ms-2">
-                                                            <fmt:formatDate value="${feedback.feedbackDate}" pattern="MMM dd, yyyy" />
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <c:forEach begin="1" end="5" var="i">
-                                                            <i class="fas fa-star ${i <= feedback.rating ? 'text-warning' : 'text-muted'}"></i>
-                                                        </c:forEach>
-                                                    </div>
-                                                </div>
-                                                <p class="mb-1">${feedback.comment}</p>
-                                                <small class="text-muted">Item: ${feedback.itemTitle}</small>
-                                            </div>
-                                        </c:forEach>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <div class="text-center py-3">
-                                            <p class="text-muted">Feedback you give to others will appear here</p>
+                    <div class="card-body">
+                        <form action="UpdateProfileServlet" method="post" enctype="multipart/form-data">
+                            <div class="row mb-4">
+                                <div class="col-md-4 text-center">
+                                    <div class="mb-3">
+                                        <img src="${empty user.profileImage ? 'assets/images/default-avatar.png' : user.profileImage}" 
+                                             alt="${user.username}" class="rounded-circle mb-3" width="150" height="150" id="profilePreview">
+                                        <div class="d-grid">
+                                            <label for="profileImage" class="btn btn-outline-primary">
+                                                <i class="fas fa-upload me-2"></i>Change Photo
+                                            </label>
+                                            <input type="file" id="profileImage" name="profileImage" accept="image/*" class="d-none" onchange="previewImage(this)">
                                         </div>
-                                    </c:otherwise>
-                                </c:choose>
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="username" class="form-label">Username</label>
+                                        <input type="text" class="form-control" id="username" name="username" value="${user.username}" readonly>
+                                        <div class="form-text">Username cannot be changed</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email Address</label>
+                                        <input type="email" class="form-control" id="email" name="email" value="${user.email}" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="fullName" class="form-label">Full Name</label>
+                                        <input type="text" class="form-control" id="fullName" name="fullName" value="${user.fullName}" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="contactNo" class="form-label">Contact Number</label>
+                                        <input type="text" class="form-control" id="contactNo" name="contactNo" value="${user.contactNo}">
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                            
+                            <hr class="my-4">
+                            
+                            <h5 class="mb-3">Change Password</h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="currentPassword" class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="currentPassword" name="currentPassword">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="newPassword" class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="newPassword" name="newPassword">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword">
+                                </div>
+                            </div>
+                            <div class="form-text mb-3">Leave password fields empty if you don't want to change your password</div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="reset" class="btn btn-outline-secondary">
+                                    <i class="fas fa-undo me-2"></i>Reset
+                                </button>
+                                <button type="submit" class="btn action-btn text-white">
+                                    <i class="fas fa-save me-2"></i>Save Changes
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -440,8 +587,85 @@
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
     
     <script>
+        // Initialize DataTables
+        $(document).ready(function() {
+            $('#userBidsTable').DataTable({
+                order: [[4, 'asc']], // Sort by end time
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search bids..."
+                }
+            });
+            
+            $('#watchlistTable').DataTable({
+                order: [[2, 'asc']], // Sort by end time
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search watchlist..."
+                }
+            });
+            
+            $('#listingsTable').DataTable({
+                order: [[3, 'asc']], // Sort by end time
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search listings..."
+                }
+            });
+            
+            $('#transactionsTable').DataTable({
+                order: [[3, 'desc']], // Sort by date (newest first)
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search transactions..."
+                }
+            });
+        });
+        
+        // Countdown timer for auctions
+        function updateCountdowns() {
+            document.querySelectorAll('.countdown').forEach(function(element) {
+                const endTime = new Date(element.getAttribute('data-end')).getTime();
+                const now = new Date().getTime();
+                const distance = endTime - now;
+                
+                if (distance < 0) {
+                    element.innerHTML = "Ended";
+                    element.classList.add('text-danger');
+                } else {
+                    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    
+                    let countdownText = "";
+                    if (days > 0) {
+                        countdownText = days + "d " + hours + "h";
+                    } else if (hours > 0) {
+                        countdownText = hours + "h " + minutes + "m";
+                    } else if (minutes > 0) {
+                        countdownText = minutes + "m " + seconds + "s";
+                    } else {
+                        countdownText = seconds + "s";
+                        element.classList.add('text-danger');
+                    }
+                    
+                    element.innerHTML = countdownText;
+                }
+            });
+        }
+        
+        // Update countdowns immediately and then every second
+        updateCountdowns();
+        setInterval(updateCountdowns, 1000);
+        
         // Show edit bid modal
         function showEditBidModal(bidId, itemTitle, bidAmount) {
             document.getElementById('editBidId').value = bidId;
@@ -460,6 +684,19 @@
             
             const deleteModal = new bootstrap.Modal(document.getElementById('deleteBidModal'));
             deleteModal.show();
+        }
+        
+        // Preview profile image before upload
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    document.getElementById('profilePreview').src = e.target.result;
+                }
+                
+                reader.readAsDataURL(input.files[0]);
+            }
         }
     </script>
 </body>

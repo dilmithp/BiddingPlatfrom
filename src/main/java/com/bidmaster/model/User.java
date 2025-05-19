@@ -31,8 +31,8 @@ public class User {
     }
     
     // Constructor with userId
-    public User(int userId, String username, String email, String password, String fullName, 
-                String contactNo, String role, String profileImage, Timestamp registrationDate) {
+    public User(int userId, String username, String email, String password, String fullName,
+            String contactNo, String role, String profileImage, Timestamp registrationDate) {
         this.userId = userId;
         this.username = username;
         this.email = email;
@@ -116,6 +116,7 @@ public class User {
     public void setRegistrationDate(Timestamp registrationDate) {
         this.registrationDate = registrationDate;
     }
+    
     public double getRating() {
         return rating;
     }
