@@ -38,9 +38,9 @@ public class CreateItemServlet extends HttpServlet {
     public void init() {
         itemService = new ItemServiceImpl();
     }
-    
+
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         // Check if user is logged in
         HttpSession session = request.getSession(false);
@@ -49,13 +49,12 @@ public class CreateItemServlet extends HttpServlet {
             return;
         }
         
-        request.getRequestDispatcher("items/create.jsp").forward(request, response);
+        response.sendRedirect("SellerDashboardServlet");
     }
-    
+
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
         // Check if user is logged in
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("userId") == null) {
@@ -63,7 +62,25 @@ public class CreateItemServlet extends HttpServlet {
             return;
         }
         
-        int sellerId = (int) session.getAttribute("userId");
+        boolean isAdminCreated = "true".equals(request.getParameter("adminCreated"));
+        
+        // Get seller ID (from form if admin created, otherwise from session)
+        int sellerId;
+        if (isAdminCreated) {
+            try {
+                sellerId = Integer.parseInt(request.getParameter("sellerId"));
+            } catch (NumberFormatException e) {
+                session.setAttribute("errorMessage", "Invalid seller ID");
+                if (isAdminCreated) {
+                    response.sendRedirect("admin/AdminItemServlet");
+                } else {
+                    response.sendRedirect("SellerDashboardServlet");
+                }
+                return;
+            }
+        } else {
+            sellerId = (int) session.getAttribute("userId");
+        }
         
         // Get form parameters
         String title = request.getParameter("title");
@@ -71,19 +88,21 @@ public class CreateItemServlet extends HttpServlet {
         String startingPriceStr = request.getParameter("startingPrice");
         String reservePriceStr = request.getParameter("reservePrice");
         String categoryIdStr = request.getParameter("categoryId");
+        String auctionDurationStr = request.getParameter("auctionDuration");
         String startTimeStr = request.getParameter("startTime");
-        String endTimeStr = request.getParameter("endTime");
+        String status = request.getParameter("status");
         
         // Validate input
         boolean isValid = true;
+        String errorMessage = "";
         
         if (!ValidationUtil.isNotEmpty(title)) {
-            request.setAttribute("titleError", "Title is required");
+            errorMessage = "Title is required";
             isValid = false;
         }
         
         if (!ValidationUtil.isNotEmpty(description)) {
-            request.setAttribute("descriptionError", "Description is required");
+            errorMessage = "Description is required";
             isValid = false;
         }
         
@@ -91,11 +110,11 @@ public class CreateItemServlet extends HttpServlet {
         try {
             startingPrice = new BigDecimal(startingPriceStr);
             if (startingPrice.compareTo(BigDecimal.ZERO) <= 0) {
-                request.setAttribute("startingPriceError", "Starting price must be greater than 0");
+                errorMessage = "Starting price must be greater than 0";
                 isValid = false;
             }
         } catch (NumberFormatException e) {
-            request.setAttribute("startingPriceError", "Please enter a valid starting price");
+            errorMessage = "Please enter a valid starting price";
             isValid = false;
         }
         
@@ -104,11 +123,11 @@ public class CreateItemServlet extends HttpServlet {
             try {
                 reservePrice = new BigDecimal(reservePriceStr);
                 if (reservePrice.compareTo(BigDecimal.ZERO) <= 0) {
-                    request.setAttribute("reservePriceError", "Reserve price must be greater than 0");
+                    errorMessage = "Reserve price must be greater than 0";
                     isValid = false;
                 }
             } catch (NumberFormatException e) {
-                request.setAttribute("reservePriceError", "Please enter a valid reserve price");
+                errorMessage = "Please enter a valid reserve price";
                 isValid = false;
             }
         }
@@ -117,62 +136,60 @@ public class CreateItemServlet extends HttpServlet {
         try {
             categoryId = Integer.parseInt(categoryIdStr);
         } catch (NumberFormatException e) {
-            request.setAttribute("categoryIdError", "Please select a category");
+            errorMessage = "Please select a category";
             isValid = false;
         }
         
-        DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-        LocalDateTime startTime = null;
-        LocalDateTime endTime = null;
+        // Calculate start and end times
+        LocalDateTime startTime;
+        LocalDateTime endTime;
         
-        try {
-            startTime = LocalDateTime.parse(startTimeStr, formatter);
-        } catch (Exception e) {
-            request.setAttribute("startTimeError", "Please enter a valid start time");
-            isValid = false;
-        }
-        
-        try {
-            endTime = LocalDateTime.parse(endTimeStr, formatter);
-        } catch (Exception e) {
-            request.setAttribute("endTimeError", "Please enter a valid end time");
-            isValid = false;
-        }
-        
-        if (startTime != null && endTime != null) {
-            if (startTime.isAfter(endTime)) {
-                request.setAttribute("endTimeError", "End time must be after start time");
-                isValid = false;
+        if (startTimeStr != null && !startTimeStr.trim().isEmpty()) {
+            try {
+                // Parse the start time if provided
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                startTime = LocalDateTime.parse(startTimeStr, formatter);
+            } catch (Exception e) {
+                startTime = LocalDateTime.now();
             }
-            
-            if (startTime.isBefore(LocalDateTime.now())) {
-                request.setAttribute("startTimeError", "Start time must be in the future");
-                isValid = false;
+        } else {
+            // Default to current time if not provided
+            startTime = LocalDateTime.now();
+        }
+        
+        // Calculate end time based on auction duration
+        int durationDays = 7; // Default to 7 days
+        if (auctionDurationStr != null && !auctionDurationStr.isEmpty()) {
+            try {
+                durationDays = Integer.parseInt(auctionDurationStr);
+            } catch (NumberFormatException e) {
+                // Use default if parsing fails
             }
         }
+        
+        endTime = startTime.plusDays(durationDays);
         
         // Process image upload
         String imageUrl = null;
         try {
-            Part filePart = request.getPart("image");
+            Part filePart = request.getPart("itemImage");
             if (filePart != null && filePart.getSize() > 0) {
                 imageUrl = ImageUploadUtil.uploadImage(filePart, getServletContext());
             }
         } catch (Exception e) {
-            request.setAttribute("imageError", "Error uploading image: " + e.getMessage());
+            errorMessage = "Error uploading image: " + e.getMessage();
             isValid = false;
         }
         
         if (!isValid) {
-            // Return to form with error messages
-            request.setAttribute("title", title);
-            request.setAttribute("description", description);
-            request.setAttribute("startingPrice", startingPriceStr);
-            request.setAttribute("reservePrice", reservePriceStr);
-            request.setAttribute("categoryId", categoryIdStr);
-            request.setAttribute("startTime", startTimeStr);
-            request.setAttribute("endTime", endTimeStr);
-            request.getRequestDispatcher("items/create.jsp").forward(request, response);
+            // Use session for error message to avoid infinite loop with forward
+            session.setAttribute("errorMessage", errorMessage);
+            
+            if (isAdminCreated) {
+                response.sendRedirect("admin/AdminItemServlet");
+            } else {
+                response.sendRedirect("SellerDashboardServlet");
+            }
             return;
         }
         
@@ -189,29 +206,39 @@ public class CreateItemServlet extends HttpServlet {
             item.setSellerId(sellerId);
             item.setStartTime(startTime);
             item.setEndTime(endTime);
-            item.setStatus("pending");
+            
+            // Set status (default to pending if not provided)
+            if (status != null && !status.isEmpty()) {
+                item.setStatus(status);
+            } else {
+                item.setStatus("pending");
+            }
             
             // Save item
             int itemId = itemService.createItem(item);
-            
             LOGGER.log(Level.INFO, "Item created: {0}, ID: {1}", new Object[]{title, itemId});
             
-            // Redirect to item details page
-            response.sendRedirect("ItemDetailsServlet?id=" + itemId + "&message=Item created successfully");
+            // Set success message
+            session.setAttribute("successMessage", "Item created successfully!");
             
+            // Redirect based on who created the item
+            if (isAdminCreated) {
+                response.sendRedirect("admin/AdminItemServlet");
+            } else {
+                response.sendRedirect("SellerDashboardServlet");
+            }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error creating item", e);
-            request.setAttribute("errorMessage", "Error creating item: " + e.getMessage());
             
-            // Return to form with error message
-            request.setAttribute("title", title);
-            request.setAttribute("description", description);
-            request.setAttribute("startingPrice", startingPriceStr);
-            request.setAttribute("reservePrice", reservePriceStr);
-            request.setAttribute("categoryId", categoryIdStr);
-            request.setAttribute("startTime", startTimeStr);
-            request.setAttribute("endTime", endTimeStr);
-            request.getRequestDispatcher("items/create.jsp").forward(request, response);
+            // Set error message
+            session.setAttribute("errorMessage", "Error creating item: " + e.getMessage());
+            
+            // Redirect based on who created the item
+            if (isAdminCreated) {
+                response.sendRedirect("admin/AdminItemServlet");
+            } else {
+                response.sendRedirect("SellerDashboardServlet");
+            }
         }
     }
 }

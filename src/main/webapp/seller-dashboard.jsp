@@ -127,18 +127,20 @@
     
     <div class="container mb-5">
         <!-- Alert Messages -->
-        <c:if test="${not empty successMessage}">
+        <c:if test="${not empty sessionScope.successMessage}">
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle me-2"></i>${successMessage}
+                <i class="fas fa-check-circle me-2"></i>${sessionScope.successMessage}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+            <% session.removeAttribute("successMessage"); %>
         </c:if>
         
-        <c:if test="${not empty errorMessage}">
+        <c:if test="${not empty sessionScope.errorMessage}">
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-circle me-2"></i>${errorMessage}
+                <i class="fas fa-exclamation-circle me-2"></i>${sessionScope.errorMessage}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+            <% session.removeAttribute("errorMessage"); %>
         </c:if>
         
         <!-- Stats Cards -->
@@ -270,9 +272,11 @@
                                                     <td>$<fmt:formatNumber value="${item.currentPrice}" pattern="#,##0.00"/></td>
                                                     <td>${item.bidCount}</td>
                                                     <td>
-                                                        <span class="countdown" data-end="${item.endTime}">
-                                                            <fmt:formatDate value="${item.endTime}" pattern="MMM dd, yyyy HH:mm" />
-                                                        </span>
+                                                        <c:if test="${not empty item.endTime}">
+                                                            <span class="countdown" data-end="${item.endTime}">
+                                                                ${item.endTime.toLocalDate()} ${item.endTime.toLocalTime().toString().substring(0, 5)}
+                                                            </span>
+                                                        </c:if>
                                                     </td>
                                                     <td>
                                                         <span class="badge badge-active">
@@ -285,13 +289,11 @@
                                                                 <i class="fas fa-eye"></i>
                                                             </a>
                                                             <button type="button" class="btn edit-btn" 
-                                                                    onclick="editItem(${item.itemId}, '${item.title}', '${item.description}', ${item.startingPrice}, ${item.reservePrice}, ${item.categoryId}, '${item.imageUrl}')"
-                                                                    title="Edit">
+                                                                    onclick="editItem(${item.itemId})" title="Edit">
                                                                 <i class="fas fa-edit"></i>
                                                             </button>
                                                             <button type="button" class="btn delete-btn text-white" 
-                                                                    onclick="confirmDelete(${item.itemId}, '${item.title}')"
-                                                                    title="Delete">
+                                                                    onclick="confirmDelete(${item.itemId}, '${item.title}')" title="Delete">
                                                                 <i class="fas fa-trash"></i>
                                                             </button>
                                                         </div>
@@ -371,9 +373,11 @@
                                             <td>$<fmt:formatNumber value="${item.currentPrice}" pattern="#,##0.00"/></td>
                                             <td>${item.bidCount}</td>
                                             <td>
-                                                <span class="countdown" data-end="${item.endTime}">
-                                                    <fmt:formatDate value="${item.endTime}" pattern="MMM dd, yyyy HH:mm" />
-                                                </span>
+                                                <c:if test="${not empty item.endTime}">
+                                                    <span class="countdown" data-end="${item.endTime}">
+                                                        ${item.endTime.toLocalDate()} ${item.endTime.toLocalTime().toString().substring(0, 5)}
+                                                    </span>
+                                                </c:if>
                                             </td>
                                             <td>
                                                 <span class="badge ${item.status == 'active' ? 'badge-active' : (item.status == 'pending' ? 'badge-pending' : 'badge-completed')}">
@@ -387,13 +391,11 @@
                                                     </a>
                                                     <c:if test="${item.status != 'completed'}">
                                                         <button type="button" class="btn edit-btn" 
-                                                                onclick="editItem(${item.itemId}, '${item.title}', '${item.description}', ${item.startingPrice}, ${item.reservePrice}, ${item.categoryId}, '${item.imageUrl}')"
-                                                                title="Edit">
+                                                                onclick="editItem(${item.itemId})" title="Edit">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
                                                         <button type="button" class="btn delete-btn text-white" 
-                                                                onclick="confirmDelete(${item.itemId}, '${item.title}')"
-                                                                title="Delete">
+                                                                onclick="confirmDelete(${item.itemId}, '${item.title}')" title="Delete">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
                                                     </c:if>
@@ -441,7 +443,11 @@
                                                     </td>
                                                     <td>${bid.bidderUsername}</td>
                                                     <td>$<fmt:formatNumber value="${bid.bidAmount}" pattern="#,##0.00"/></td>
-                                                    <td><fmt:formatDate value="${bid.bidTime}" pattern="MMM dd, yyyy HH:mm" /></td>
+                                                    <td>
+                                                        <c:if test="${not empty bid.bidTime}">
+                                                            <fmt:formatDate value="${bid.bidTime}" pattern="MMM dd, yyyy HH:mm" />
+                                                        </c:if>
+                                                    </td>
                                                     <td>
                                                         <span class="badge ${bid.status == 'winning' ? 'badge-winning' : 'badge-outbid'}">
                                                             ${bid.status}
@@ -500,16 +506,20 @@
                                                     <td>
                                                         <div class="d-flex align-items-center">
                                                             <img src="${empty sale.imageUrl ? 'assets/images/no-image.png' : sale.imageUrl}" 
-                                                                 alt="${sale.title}" class="me-2" width="50" height="50" style="object-fit: cover;">
-                                                            <div class="fw-bold">${sale.title}</div>
+                                                                 alt="${sale.itemTitle}" class="me-2" width="50" height="50" style="object-fit: cover;">
+                                                            <div class="fw-bold">${sale.itemTitle}</div>
                                                         </div>
                                                     </td>
                                                     <td>${sale.buyerUsername}</td>
-                                                    <td>$<fmt:formatNumber value="${sale.finalPrice}" pattern="#,##0.00"/></td>
-                                                    <td><fmt:formatDate value="${sale.endTime}" pattern="MMM dd, yyyy" /></td>
+                                                    <td>$<fmt:formatNumber value="${sale.amount}" pattern="#,##0.00"/></td>
                                                     <td>
-                                                        <span class="badge ${sale.paymentStatus == 'paid' ? 'badge-active' : 'badge-pending'}">
-                                                            ${sale.paymentStatus}
+                                                        <c:if test="${not empty sale.endTime}">
+                                                            ${sale.endTime.toLocalDate()}
+                                                        </c:if>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge ${sale.status == 'completed' ? 'badge-active' : 'badge-pending'}">
+                                                            ${sale.status}
                                                         </span>
                                                     </td>
                                                     <td>
@@ -603,7 +613,11 @@
                                                     <c:forEach var="transaction" items="${recentTransactions}" varStatus="loop">
                                                         <c:if test="${loop.index < 5}">
                                                             <tr>
-                                                                <td><fmt:formatDate value="${transaction.transactionDate}" pattern="MMM dd, yyyy" /></td>
+                                                                <td>
+                                                                    <c:if test="${not empty transaction.transactionDate}">
+                                                                        <fmt:formatDate value="${transaction.transactionDate}" pattern="MMM dd, yyyy" />
+                                                                    </c:if>
+                                                                </td>
                                                                 <td>${transaction.itemTitle}</td>
                                                                 <td>$<fmt:formatNumber value="${transaction.amount}" pattern="#,##0.00"/></td>
                                                             </tr>
@@ -756,11 +770,11 @@
     </div>
     
     <!-- Delete Confirmation Modal -->
-    <div class="modal fade" id="deleteItemModal" tabindex="-1" aria-labelledby="deleteItemModalLabel" aria-hidden="true">
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="deleteItemModalLabel">Confirm Delete</h5>
+                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -823,27 +837,41 @@
         setInterval(updateCountdowns, 1000);
         
         // Edit item function
-        function editItem(itemId, title, description, startingPrice, reservePrice, categoryId, imageUrl) {
-            document.getElementById('editItemId').value = itemId;
-            document.getElementById('editTitle').value = title;
-            document.getElementById('editDescription').value = description;
-            document.getElementById('editStartingPrice').value = startingPrice;
-            document.getElementById('editReservePrice').value = reservePrice || '';
-            document.getElementById('editCategoryId').value = categoryId;
-            
-            // Set current image
-            const currentImage = document.getElementById('currentImage');
-            if (imageUrl && imageUrl !== 'null') {
-                currentImage.src = imageUrl;
-                document.getElementById('currentImageContainer').style.display = 'block';
-            } else {
-                currentImage.src = 'assets/images/no-image.png';
-                document.getElementById('currentImageContainer').style.display = 'block';
-            }
-            
-            // Show the modal
-            const editModal = new bootstrap.Modal(document.getElementById('editItemModal'));
-            editModal.show();
+        function editItem(itemId) {
+            // Fetch item details via AJAX
+            fetch('GetItemDetailsServlet?id=' + itemId)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(item => {
+                    document.getElementById('editItemId').value = item.itemId;
+                    document.getElementById('editTitle').value = item.title;
+                    document.getElementById('editDescription').value = item.description;
+                    document.getElementById('editStartingPrice').value = item.startingPrice;
+                    document.getElementById('editReservePrice').value = item.reservePrice || '';
+                    document.getElementById('editCategoryId').value = item.categoryId;
+                    
+                    // Set current image
+                    const currentImage = document.getElementById('currentImage');
+                    if (item.imageUrl) {
+                        currentImage.src = item.imageUrl;
+                        document.getElementById('currentImageContainer').style.display = 'block';
+                    } else {
+                        currentImage.src = 'assets/images/no-image.png';
+                        document.getElementById('currentImageContainer').style.display = 'block';
+                    }
+                    
+                    // Show the modal
+                    const editModal = new bootstrap.Modal(document.getElementById('editItemModal'));
+                    editModal.show();
+                })
+                .catch(error => {
+                    console.error('Error fetching item details:', error);
+                    alert('Failed to load item details. Please try again.');
+                });
         }
         
         // Delete confirmation
@@ -851,7 +879,7 @@
             document.getElementById('deleteItemId').value = itemId;
             document.getElementById('deleteItemName').textContent = itemTitle;
             
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteItemModal'));
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
             deleteModal.show();
         }
         
@@ -890,7 +918,61 @@
             });
         }
         
-        // Charts
+        // Image preview for create form
+        document.getElementById('itemImage').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewContainer = document.createElement('div');
+                    previewContainer.className = 'mt-2';
+                    previewContainer.innerHTML = `
+                        <p>Image preview:</p>
+                        <img src="${e.target.result}" alt="Preview" class="preview-image border rounded">
+                    `;
+                    
+                    // Remove any existing preview
+                    const existingPreview = document.querySelector('#createItemForm .preview-container');
+                    if (existingPreview) {
+                        existingPreview.remove();
+                    }
+                    
+                    // Add new preview
+                    previewContainer.classList.add('preview-container');
+                    document.getElementById('itemImage').parentNode.appendChild(previewContainer);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Image preview for edit form
+        document.getElementById('editItemImage').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewContainer = document.createElement('div');
+                    previewContainer.className = 'mt-2';
+                    previewContainer.innerHTML = `
+                        <p>New image preview:</p>
+                        <img src="${e.target.result}" alt="Preview" class="preview-image border rounded">
+                    `;
+                    
+                    // Remove any existing preview
+                    const existingPreview = document.querySelector('#editItemForm .preview-container');
+                    if (existingPreview) {
+                        existingPreview.remove();
+                    }
+                    
+                    // Add new preview
+                    previewContainer.classList.add('preview-container');
+                    document.getElementById('editItemImage').parentNode.appendChild(previewContainer);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Initialize charts
         document.addEventListener('DOMContentLoaded', function() {
             // Revenue Chart
             const revenueCtx = document.getElementById('revenueChart').getContext('2d');
@@ -918,7 +1000,7 @@
             const categoryChart = new Chart(categoryCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Electronics', 'Clothing', 'Home', 'Other'],
+                    labels: ['Electronics', 'Collectibles', 'Fashion', 'Home & Garden'],
                     datasets: [{
                         data: [0, 0, 0, 0],
                         backgroundColor: [

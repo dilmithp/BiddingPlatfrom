@@ -85,6 +85,9 @@ public class UserDAOImpl implements UserDAO {
         "GROUP BY u.userId " +
         "ORDER BY bidCount DESC " +
         "LIMIT ?";
+    
+    private static final String GET_USERS_BY_ROLE = 
+        "SELECT * FROM Users WHERE role = ? ORDER BY username";
 
     @Override
     public void insertUser(User user) throws SQLException {
@@ -138,6 +141,7 @@ public class UserDAOImpl implements UserDAO {
             LOGGER.log(Level.SEVERE, "Error getting user by ID: " + userId, e);
             throw e;
         }
+        
         return user;
     }
 
@@ -158,6 +162,7 @@ public class UserDAOImpl implements UserDAO {
             LOGGER.log(Level.SEVERE, "Error getting user by username: " + username, e);
             throw e;
         }
+        
         return user;
     }
 
@@ -178,6 +183,7 @@ public class UserDAOImpl implements UserDAO {
             LOGGER.log(Level.SEVERE, "Error getting user by email: " + email, e);
             throw e;
         }
+        
         return user;
     }
 
@@ -196,6 +202,7 @@ public class UserDAOImpl implements UserDAO {
             LOGGER.log(Level.SEVERE, "Error getting all users", e);
             throw e;
         }
+        
         return users;
     }
 
@@ -220,6 +227,7 @@ public class UserDAOImpl implements UserDAO {
             LOGGER.log(Level.SEVERE, "Error searching users: " + searchTerm, e);
             throw e;
         }
+        
         return users;
     }
 
@@ -337,6 +345,7 @@ public class UserDAOImpl implements UserDAO {
             LOGGER.log(Level.SEVERE, "Error getting recent users", e);
             throw e;
         }
+        
         return users;
     }
 
@@ -359,6 +368,7 @@ public class UserDAOImpl implements UserDAO {
             LOGGER.log(Level.SEVERE, "Error getting users in date range", e);
             throw e;
         }
+        
         return users;
     }
 
@@ -382,6 +392,7 @@ public class UserDAOImpl implements UserDAO {
             LOGGER.log(Level.SEVERE, "Error getting monthly registrations", e);
             throw e;
         }
+        
         return monthlyRegistrations;
     }
 
@@ -406,6 +417,7 @@ public class UserDAOImpl implements UserDAO {
             LOGGER.log(Level.SEVERE, "Error getting active users", e);
             throw e;
         }
+        
         return users;
     }
 
@@ -429,6 +441,29 @@ public class UserDAOImpl implements UserDAO {
             LOGGER.log(Level.SEVERE, "Error getting top bidders", e);
             throw e;
         }
+        
+        return users;
+    }
+    
+    @Override
+    public List<User> getUsersByRole(String role) throws SQLException {
+        List<User> users = new ArrayList<>();
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(GET_USERS_BY_ROLE)) {
+            
+            preparedStatement.setString(1, role);
+            
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    User user = extractUserFromResultSet(resultSet);
+                    users.add(user);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting users by role: " + role, e);
+            throw e;
+        }
+        
         return users;
     }
     

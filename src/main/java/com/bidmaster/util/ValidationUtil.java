@@ -3,98 +3,81 @@ package com.bidmaster.util;
 import java.util.regex.Pattern;
 
 /**
- * Utility class for validating user input
+ * Utility class for input validation
  */
 public class ValidationUtil {
     
-    // Email validation regex pattern
-    private static final String EMAIL_REGEX = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
-    
-    // Username validation pattern (alphanumeric and underscore, 3-50 chars)
-    private static final String USERNAME_REGEX = "^[a-zA-Z0-9_]{3,50}$";
-    
-    // Contact number validation (supports international format)
-    private static final String CONTACT_REGEX = "^\\+?[0-9]{10,15}$";
-    
-    // Password minimum length
-    private static final int MIN_PASSWORD_LENGTH = 8;
+    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_]{3,20}$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    private static final Pattern CONTACT_NO_PATTERN = Pattern.compile("^[0-9+\\-\\s]{7,15}$");
     
     /**
-     * Validates email format
+     * Checks if a string is not null and not empty
      * 
-     * @param email The email to validate
-     * @return true if email is valid, false otherwise
+     * @param str The string to check
+     * @return true if the string is not null and not empty, false otherwise
      */
-    public static boolean isValidEmail(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            return false;
-        }
-        return Pattern.compile(EMAIL_REGEX).matcher(email).matches();
+    public static boolean isNotEmpty(String str) {
+        return str != null && !str.trim().isEmpty();
     }
     
     /**
-     * Validates username format
+     * Validates a username
      * 
      * @param username The username to validate
-     * @return true if username is valid, false otherwise
+     * @return true if the username is valid, false otherwise
      */
     public static boolean isValidUsername(String username) {
-        if (username == null || username.trim().isEmpty()) {
-            return false;
-        }
-        return Pattern.compile(USERNAME_REGEX).matcher(username).matches();
+        return isNotEmpty(username) && USERNAME_PATTERN.matcher(username).matches();
     }
     
     /**
-     * Validates password strength
+     * Validates an email address
+     * 
+     * @param email The email address to validate
+     * @return true if the email address is valid, false otherwise
+     */
+    public static boolean isValidEmail(String email) {
+        return isNotEmpty(email) && EMAIL_PATTERN.matcher(email).matches();
+    }
+    
+    /**
+     * Validates a password
      * 
      * @param password The password to validate
-     * @return true if password is valid, false otherwise
+     * @return true if the password is valid, false otherwise
      */
     public static boolean isValidPassword(String password) {
-        return password != null && password.length() >= MIN_PASSWORD_LENGTH;
+        return isNotEmpty(password) && password.length() >= 8;
     }
     
     /**
-     * Validates contact number format
+     * Validates a contact number
      * 
      * @param contactNo The contact number to validate
-     * @return true if contact number is valid, false otherwise
+     * @return true if the contact number is valid, false otherwise
      */
     public static boolean isValidContactNo(String contactNo) {
-        if (contactNo == null || contactNo.trim().isEmpty()) {
-            return true; // Contact number is optional
-        }
-        return Pattern.compile(CONTACT_REGEX).matcher(contactNo).matches();
+        return isNotEmpty(contactNo) && CONTACT_NO_PATTERN.matcher(contactNo).matches();
     }
     
     /**
-     * Validates if a string is not null or empty
+     * Validates a number is positive
      * 
-     * @param value The string to check
-     * @return true if string has content, false otherwise
+     * @param number The number to validate
+     * @return true if the number is positive, false otherwise
      */
-    public static boolean isNotEmpty(String value) {
-        return value != null && !value.trim().isEmpty();
+    public static boolean isPositive(double number) {
+        return number > 0;
     }
     
     /**
-     * Validates if a number is positive
+     * Validates a number is non-negative
      * 
-     * @param value The number to check
-     * @return true if number is positive, false otherwise
+     * @param number The number to validate
+     * @return true if the number is non-negative, false otherwise
      */
-    public static boolean isPositive(int value) {
-        return value > 0;
-    }
-    
-    /**
-     * Validates if a number is positive
-     * 
-     * @param value The number to check
-     * @return true if number is positive, false otherwise
-     */
-    public static boolean isPositive(double value) {
-        return value > 0;
+    public static boolean isNonNegative(double number) {
+        return number >= 0;
     }
 }

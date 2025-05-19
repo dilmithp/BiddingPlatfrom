@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
+import com.bidmaster.model.Bid;
 import com.bidmaster.model.Item;
 import com.bidmaster.service.BidService;
 import com.bidmaster.service.ItemService;
@@ -31,15 +32,16 @@ public class PlaceBidServlet extends HttpServlet {
         bidService = new BidServiceImpl();
         itemService = new ItemServiceImpl();
     }
-    
+
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        // Check if user is logged in
         HttpSession session = request.getSession(false);
+        
+        // Check if user is logged in
         if (session == null || session.getAttribute("userId") == null) {
-            response.sendRedirect("LoginServlet");
+            response.sendRedirect("login.jsp");
             return;
         }
         
@@ -52,55 +54,76 @@ public class PlaceBidServlet extends HttpServlet {
             
             // Get item details
             Item item = itemService.getItemById(itemId);
+            
             if (item == null) {
+                LOGGER.log(Level.WARNING, "Item not found: {0}", itemId);
                 request.setAttribute("errorMessage", "Item not found");
-                request.getRequestDispatcher("ItemDetailsServlet?id=" + itemId).forward(request, response);
+                request.getRequestDispatcher("error.jsp").forward(request, response);
                 return;
             }
             
-            // Check if bidder is not the seller
-            if (item.getSellerId() == bidderId) {
-                request.setAttribute("errorMessage", "You cannot bid on your own item");
-                request.getRequestDispatcher("ItemDetailsServlet?id=" + itemId).forward(request, response);
-                return;
-            }
-            
-            // Check if item is active
+            // Check if auction is still active
             if (!"active".equals(item.getStatus())) {
-                request.setAttribute("errorMessage", "This item is not available for bidding");
+                LOGGER.log(Level.WARNING, "Attempt to bid on inactive auction: {0}", itemId);
+                request.setAttribute("errorMessage", "This auction is no longer active");
+                request.getRequestDispatcher("ItemDetailsServlet?id=" + itemId).forward(request, response);
+                return;
+            }
+            
+            // Check if user is not the seller
+            if (item.getSellerId() == bidderId) {
+                LOGGER.log(Level.WARNING, "Seller attempted to bid on own item: {0}", itemId);
+                request.setAttribute("errorMessage", "You cannot bid on your own item");
                 request.getRequestDispatcher("ItemDetailsServlet?id=" + itemId).forward(request, response);
                 return;
             }
             
             // Check if bid amount is higher than current price
             if (bidAmount.compareTo(item.getCurrentPrice()) <= 0) {
-                request.setAttribute("errorMessage", "Bid amount must be higher than current price");
+                LOGGER.log(Level.WARNING, "Bid amount too low: {0} (current price: {1})", 
+                        new Object[]{bidAmount, item.getCurrentPrice()});
+                request.setAttribute("errorMessage", "Your bid must be higher than the current price");
                 request.getRequestDispatcher("ItemDetailsServlet?id=" + itemId).forward(request, response);
                 return;
             }
             
-            // Place bid
-            bidService.placeBid(itemId, bidderId, bidAmount);
+            // Create bid object
+            Bid bid = new Bid();
+            bid.setItemId(itemId);
+            bid.setBidderId(bidderId);
+            bid.setBidAmount(bidAmount);
+            bid.setStatus("active");
             
-            // Redirect to item details with success message
-            request.setAttribute("successMessage", "Your bid has been placed successfully");
+            // Place bid
+            int bidId = bidService.placeBid(bid);
+            
+            if (bidId > 0) {
+                LOGGER.log(Level.INFO, "Bid placed successfully: ID {0}, Amount: {1}, Item: {2}", 
+                        new Object[]{bidId, bidAmount, itemId});
+                
+                // Update item's current price
+                item.setCurrentPrice(bidAmount);
+                itemService.updateItem(item);
+                
+                // Update previous highest bid status to 'outbid'
+                bidService.updatePreviousHighestBid(itemId, bidId);
+                
+                request.setAttribute("successMessage", "Your bid of $" + bidAmount + " has been placed successfully!");
+            } else {
+                request.setAttribute("errorMessage", "Failed to place bid. Please try again.");
+            }
+            
+            // Redirect back to item details
             request.getRequestDispatcher("ItemDetailsServlet?id=" + itemId).forward(request, response);
             
         } catch (NumberFormatException e) {
-            LOGGER.log(Level.SEVERE, "Invalid number format", e);
-            request.setAttribute("errorMessage", "Invalid input format");
-            request.getRequestDispatcher("ItemListServlet").forward(request, response);
+            LOGGER.log(Level.SEVERE, "Invalid input format", e);
+            request.setAttribute("errorMessage", "Invalid input. Please enter a valid bid amount.");
+            request.getRequestDispatcher("error.jsp").forward(request, response);
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Database error placing bid", e);
-            request.setAttribute("errorMessage", "Error placing bid: " + e.getMessage());
-            
-            // Try to get itemId for redirection
-            try {
-                int itemId = Integer.parseInt(request.getParameter("itemId"));
-                request.getRequestDispatcher("ItemDetailsServlet?id=" + itemId).forward(request, response);
-            } catch (NumberFormatException ex) {
-                request.getRequestDispatcher("ItemListServlet").forward(request, response);
-            }
+            LOGGER.log(Level.SEVERE, "Database error in PlaceBidServlet", e);
+            request.setAttribute("errorMessage", "Database error: " + e.getMessage());
+            request.getRequestDispatcher("error.jsp").forward(request, response);
         }
     }
 }

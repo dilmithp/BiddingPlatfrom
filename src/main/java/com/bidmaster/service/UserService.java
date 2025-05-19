@@ -88,7 +88,7 @@ public interface UserService {
      * @throws SQLException if a database error occurs
      */
     boolean authenticateUser(String username, String password) throws SQLException;
-    
+
     /**
      * Validates a user's credentials
      *
@@ -106,7 +106,7 @@ public interface UserService {
      * @return true if the user is an admin, false otherwise
      */
     boolean isAdmin(User user);
-    
+
     /**
      * Checks if a user is a seller
      *
@@ -140,4 +140,13 @@ public interface UserService {
      * @throws SQLException if a database error occurs
      */
     List<User> getRecentUsers(int limit) throws SQLException;
+    
+    /**
+     * Gets users by role
+     *
+     * @param role The role to filter by
+     * @return List of users with the specified role
+     * @throws SQLException if a database error occurs
+     */
+    List<User> getUsersByRole(String role) throws SQLException;
 }

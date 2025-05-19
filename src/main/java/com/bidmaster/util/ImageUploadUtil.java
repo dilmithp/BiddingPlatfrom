@@ -3,7 +3,9 @@ package com.bidmaster.util;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -11,97 +13,134 @@ import java.util.logging.Logger;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.Part;
 
-/**
- * Utility class for handling image uploads
- */
 public class ImageUploadUtil {
     private static final Logger LOGGER = Logger.getLogger(ImageUploadUtil.class.getName());
     
-    private static final String UPLOAD_DIRECTORY = "uploads";
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-    private static final String[] ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif"};
+    private static final String UPLOAD_DIRECTORY = "assets/images/items";
     
     /**
-     * Uploads an image file to the server
+     * Uploads an image file and returns the relative URL
      * 
      * @param filePart The file part from multipart request
      * @param context The servlet context
-     * @return The relative path to the uploaded image
-     * @throws IOException If an I/O error occurs
-     * @throws IllegalArgumentException If the file is invalid
+     * @return The relative URL of the uploaded image
+     * @throws IOException if an I/O error occurs
      */
-    public static String uploadImage(Part filePart, ServletContext context) throws IOException, IllegalArgumentException {
-        // Validate file size
-        if (filePart.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("File size exceeds the maximum limit of 5MB");
-        }
+    public static String uploadImage(Part filePart, ServletContext context) throws IOException {
+        // Get file name
+        String fileName = getSubmittedFileName(filePart);
         
-        // Get file name and extension
-        String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
-        String fileExtension = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
-        
-        // Validate file extension
-        boolean isValidExtension = false;
-        for (String ext : ALLOWED_EXTENSIONS) {
-            if (ext.equals(fileExtension)) {
-                isValidExtension = true;
-                break;
-            }
-        }
-        
-        if (!isValidExtension) {
-            throw new IllegalArgumentException("Invalid file type. Allowed types: JPG, JPEG, PNG, GIF");
-        }
-        
-        // Create upload directory if it doesn't exist
-        String uploadPath = context.getRealPath("") + File.separator + UPLOAD_DIRECTORY;
-        File uploadDir = new File(uploadPath);
-        if (!uploadDir.exists()) {
-            uploadDir.mkdir();
+        // Validate file type
+        if (!isValidImageFile(fileName)) {
+            throw new IOException("Invalid file type. Only JPG, PNG, and GIF are allowed.");
         }
         
         // Generate unique file name
-        String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
-        String filePath = uploadPath + File.separator + uniqueFileName;
+        String uniqueFileName = generateUniqueFileName(fileName);
         
-        // Save the file
-        try {
-            filePart.write(filePath);
-            LOGGER.log(Level.INFO, "File uploaded successfully: {0}", uniqueFileName);
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error saving uploaded file", e);
-            throw e;
+        // Get upload directory path
+        String uploadPath = context.getRealPath("") + File.separator + UPLOAD_DIRECTORY;
+        
+        // Create directory if it doesn't exist
+        File uploadDir = new File(uploadPath);
+        if (!uploadDir.exists()) {
+            uploadDir.mkdirs();
         }
         
-        // Return the relative path
+        // Normalize and validate the path to prevent path traversal attacks
+        Path filePath = Paths.get(uploadPath, uniqueFileName).normalize();
+        if (!filePath.startsWith(uploadPath)) {
+            throw new IOException("Invalid file path: possible path traversal attempt");
+        }
+        
+        // Save file
+        Files.copy(filePart.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        
+        LOGGER.log(Level.INFO, "File uploaded: {0}", uniqueFileName);
+        
+        // Return relative URL
         return UPLOAD_DIRECTORY + "/" + uniqueFileName;
     }
     
     /**
-     * Deletes an image file from the server
+     * Deletes an image file
      * 
-     * @param imagePath The relative path to the image
+     * @param imageUrl The relative URL of the image to delete
      * @param context The servlet context
-     * @return true if deletion was successful, false otherwise
+     * @return true if the file was deleted, false otherwise
      */
-    public static boolean deleteImage(String imagePath, ServletContext context) {
-        if (imagePath == null || imagePath.isEmpty()) {
+    public static boolean deleteImage(String imageUrl, ServletContext context) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
             return false;
         }
         
         try {
-            String fullPath = context.getRealPath("") + File.separator + imagePath;
-            File file = new File(fullPath);
+            // Get absolute path
+            String uploadPath = context.getRealPath("") + File.separator;
+            Path imagePath = Paths.get(uploadPath, imageUrl).normalize();
             
-            if (file.exists()) {
-                Files.delete(file.toPath());
-                LOGGER.log(Level.INFO, "File deleted successfully: {0}", imagePath);
+            // Validate path is within the upload directory
+            if (!imagePath.startsWith(uploadPath)) {
+                LOGGER.log(Level.WARNING, "Invalid image path: possible path traversal attempt");
+                return false;
+            }
+            
+            // Delete file if it exists
+            if (Files.exists(imagePath)) {
+                Files.delete(imagePath);
+                LOGGER.log(Level.INFO, "File deleted: {0}", imageUrl);
                 return true;
+            } else {
+                LOGGER.log(Level.WARNING, "File not found: {0}", imageUrl);
+                return false;
             }
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error deleting file", e);
+            LOGGER.log(Level.SEVERE, "Error deleting image: " + imageUrl, e);
+            return false;
+        }
+    }
+    
+    /**
+     * Gets the submitted file name from a Part
+     * 
+     * @param part The part from multipart request
+     * @return The submitted file name
+     */
+    private static String getSubmittedFileName(Part part) {
+        String contentDisp = part.getHeader("content-disposition");
+        String[] items = contentDisp.split(";");
+        
+        for (String item : items) {
+            if (item.trim().startsWith("filename")) {
+                return item.substring(item.indexOf('=') + 2, item.length() - 1);
+            }
         }
         
-        return false;
+        return "";
+    }
+    
+    /**
+     * Checks if the file is a valid image file
+     * 
+     * @param fileName The file name
+     * @return true if the file is a valid image file, false otherwise
+     */
+    private static boolean isValidImageFile(String fileName) {
+        String lowerCaseFileName = fileName.toLowerCase();
+        return lowerCaseFileName.endsWith(".jpg") || 
+               lowerCaseFileName.endsWith(".jpeg") || 
+               lowerCaseFileName.endsWith(".png") || 
+               lowerCaseFileName.endsWith(".gif");
+    }
+    
+    /**
+     * Generates a unique file name
+     * 
+     * @param originalFileName The original file name
+     * @return The unique file name
+     */
+    private static String generateUniqueFileName(String originalFileName) {
+        String extension = originalFileName.substring(originalFileName.lastIndexOf('.'));
+        return UUID.randomUUID().toString() + extension;
     }
 }

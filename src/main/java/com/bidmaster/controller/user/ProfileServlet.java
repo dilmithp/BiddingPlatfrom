@@ -36,15 +36,14 @@ public class ProfileServlet extends HttpServlet {
     public void init() {
         userService = new UserServiceImpl();
     }
-    
+
     /**
      * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
      * Handles displaying the user profile
      */
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
         HttpSession session = request.getSession(false);
         
         // Check if user is logged in
@@ -71,22 +70,20 @@ public class ProfileServlet extends HttpServlet {
             // Forward to profile JSP
             RequestDispatcher dispatcher = request.getRequestDispatcher("profile.jsp");
             dispatcher.forward(request, response);
-            
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Database error while retrieving profile", e);
             request.setAttribute("errorMessage", "Failed to retrieve profile: " + e.getMessage());
             request.getRequestDispatcher("error.jsp").forward(request, response);
         }
     }
-    
+
     /**
      * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
      * Handles updating the user profile
      */
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
         HttpSession session = request.getSession(false);
         
         // Check if user is logged in
@@ -149,12 +146,13 @@ public class ProfileServlet extends HttpServlet {
             
             // Handle profile image upload
             String profileImagePath = user.getProfileImage(); // Keep existing image by default
+            
             try {
                 Part profileImagePart = request.getPart("profileImage");
                 if (profileImagePart != null && profileImagePart.getSize() > 0) {
                     // Delete old image if exists
-                    if (profileImagePath != null && !profileImagePath.isEmpty() && 
-                        !profileImagePath.equals("assets/images/default-avatar.png")) {
+                    if (profileImagePath != null && !profileImagePath.isEmpty() &&
+                            !profileImagePath.equals("assets/images/default-avatar.png")) {
                         ImageUploadUtil.deleteImage(profileImagePath, getServletContext());
                     }
                     
@@ -190,7 +188,6 @@ public class ProfileServlet extends HttpServlet {
             if (updated) {
                 request.setAttribute("successMessage", "Profile updated successfully");
                 LOGGER.log(Level.INFO, "Profile updated for user: {0}", username);
-                
                 // Update session with new values
                 session.setAttribute("fullName", user.getFullName());
             } else {
@@ -201,7 +198,6 @@ public class ProfileServlet extends HttpServlet {
             // Forward back to profile page
             request.setAttribute("user", user);
             request.getRequestDispatcher("profile.jsp").forward(request, response);
-            
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Database error while updating profile", e);
             request.setAttribute("errorMessage", "Failed to update profile: " + e.getMessage());

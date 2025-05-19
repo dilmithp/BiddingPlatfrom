@@ -8,22 +8,84 @@ import java.util.Map;
 import com.bidmaster.model.User;
 
 public interface UserDAO {
+    /**
+     * Inserts a new user
+     * 
+     * @param user The user to insert
+     * @throws SQLException if a database error occurs
+     */
     void insertUser(User user) throws SQLException;
     
+    /**
+     * Gets a user by ID
+     * 
+     * @param userId The user ID
+     * @return The user, or null if not found
+     * @throws SQLException if a database error occurs
+     */
     User getUserById(int userId) throws SQLException;
     
+    /**
+     * Gets a user by username
+     * 
+     * @param username The username
+     * @return The user, or null if not found
+     * @throws SQLException if a database error occurs
+     */
     User getUserByUsername(String username) throws SQLException;
     
+    /**
+     * Gets a user by email
+     * 
+     * @param email The email
+     * @return The user, or null if not found
+     * @throws SQLException if a database error occurs
+     */
     User getUserByEmail(String email) throws SQLException;
     
+    /**
+     * Gets all users
+     * 
+     * @return List of all users
+     * @throws SQLException if a database error occurs
+     */
     List<User> getAllUsers() throws SQLException;
     
+    /**
+     * Searches for users by keyword
+     * 
+     * @param searchTerm The search term
+     * @return List of matching users
+     * @throws SQLException if a database error occurs
+     */
     List<User> searchUsers(String searchTerm) throws SQLException;
     
+    /**
+     * Updates a user
+     * 
+     * @param user The user to update
+     * @return true if successful, false otherwise
+     * @throws SQLException if a database error occurs
+     */
     boolean updateUser(User user) throws SQLException;
     
+    /**
+     * Deletes a user
+     * 
+     * @param userId The user ID
+     * @return true if successful, false otherwise
+     * @throws SQLException if a database error occurs
+     */
     boolean deleteUser(int userId) throws SQLException;
     
+    /**
+     * Validates a user's credentials
+     * 
+     * @param username The username
+     * @param password The password
+     * @return true if validation is successful, false otherwise
+     * @throws SQLException if a database error occurs
+     */
     boolean validateUser(String username, String password) throws SQLException;
     
     /**
@@ -92,4 +154,13 @@ public interface UserDAO {
      * @throws SQLException if a database error occurs
      */
     List<User> getTopBidders(LocalDate startDate, LocalDate endDate, int limit) throws SQLException;
+    
+    /**
+     * Gets users by role
+     *
+     * @param role The role to filter by
+     * @return List of users with the specified role
+     * @throws SQLException if a database error occurs
+     */
+    List<User> getUsersByRole(String role) throws SQLException;
 }

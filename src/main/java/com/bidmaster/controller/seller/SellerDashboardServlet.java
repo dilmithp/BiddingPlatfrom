@@ -2,6 +2,7 @@ package com.bidmaster.controller.seller;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -14,17 +15,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-import com.bidmaster.model.Item;
 import com.bidmaster.model.Bid;
 import com.bidmaster.model.Category;
+import com.bidmaster.model.Item;
 import com.bidmaster.model.Transaction;
-import com.bidmaster.service.ItemService;
 import com.bidmaster.service.BidService;
 import com.bidmaster.service.CategoryService;
+import com.bidmaster.service.ItemService;
 import com.bidmaster.service.TransactionService;
-import com.bidmaster.service.impl.ItemServiceImpl;
 import com.bidmaster.service.impl.BidServiceImpl;
 import com.bidmaster.service.impl.CategoryServiceImpl;
+import com.bidmaster.service.impl.ItemServiceImpl;
 import com.bidmaster.service.impl.TransactionServiceImpl;
 
 @WebServlet("/SellerDashboardServlet")
@@ -58,22 +59,28 @@ public class SellerDashboardServlet extends HttpServlet {
         }
         
         int sellerId = (int) session.getAttribute("userId");
+        LOGGER.log(Level.INFO, "Loading seller dashboard for seller ID: {0}", sellerId);
         
         try {
             // Get active listings
             List<Item> activeListings = itemService.getActiveItemsBySeller(sellerId);
+            LOGGER.log(Level.INFO, "Retrieved {0} active listings", activeListings.size());
             
             // Get all seller items
             List<Item> allSellerItems = itemService.getItemsBySeller(sellerId);
+            LOGGER.log(Level.INFO, "Retrieved {0} total items", allSellerItems.size());
             
             // Get recent bids on seller items
             List<Bid> recentBids = bidService.getRecentBidsForSeller(sellerId, 20);
+            LOGGER.log(Level.INFO, "Retrieved {0} recent bids", recentBids.size());
             
             // Get completed sales
             List<Transaction> completedSales = transactionService.getCompletedSalesBySeller(sellerId);
+            LOGGER.log(Level.INFO, "Retrieved {0} completed sales", completedSales.size());
             
             // Get all categories for item creation/editing
             List<Category> categories = categoryService.getAllCategories();
+            LOGGER.log(Level.INFO, "Retrieved {0} categories", categories.size());
             
             // Get seller statistics
             Map<String, Object> stats = getSellerStats(sellerId);
@@ -93,6 +100,10 @@ public class SellerDashboardServlet extends HttpServlet {
             LOGGER.log(Level.SEVERE, "Database error in SellerDashboardServlet", e);
             request.setAttribute("errorMessage", "Database error: " + e.getMessage());
             request.getRequestDispatcher("error.jsp").forward(request, response);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Unexpected error in SellerDashboardServlet", e);
+            request.setAttribute("errorMessage", "Unexpected error: " + e.getMessage());
+            request.getRequestDispatcher("error.jsp").forward(request, response);
         }
     }
     
@@ -111,7 +122,7 @@ public class SellerDashboardServlet extends HttpServlet {
      * @throws SQLException if a database error occurs
      */
     private Map<String, Object> getSellerStats(int sellerId) throws SQLException {
-        Map<String, Object> stats = new java.util.HashMap<>();
+        Map<String, Object> stats = new HashMap<>();
         
         // Active listings count
         int activeListingsCount = itemService.getActiveItemCountBySeller(sellerId);

@@ -11,48 +11,37 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 import com.bidmaster.model.Bid;
 import com.bidmaster.model.Item;
 import com.bidmaster.model.User;
-import com.bidmaster.model.Category;
 import com.bidmaster.service.BidService;
-import com.bidmaster.service.CategoryService;
 import com.bidmaster.service.ItemService;
 import com.bidmaster.service.UserService;
 import com.bidmaster.service.WatchlistService;
 import com.bidmaster.service.impl.BidServiceImpl;
-import com.bidmaster.service.impl.CategoryServiceImpl;
 import com.bidmaster.service.impl.ItemServiceImpl;
 import com.bidmaster.service.impl.UserServiceImpl;
 import com.bidmaster.service.impl.WatchlistServiceImpl;
 
-/**
- * Servlet implementation class ItemDetailsServlet
- * Handles displaying item details
- */
 @WebServlet("/ItemDetailsServlet")
 public class ItemDetailsServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private static final Logger LOGGER = Logger.getLogger(ItemDetailsServlet.class.getName());
     
     private ItemService itemService;
-    private UserService userService;
     private BidService bidService;
-    private CategoryService categoryService;
+    private UserService userService;
     private WatchlistService watchlistService;
     
     public void init() {
         itemService = new ItemServiceImpl();
-        userService = new UserServiceImpl();
         bidService = new BidServiceImpl();
-        categoryService = new CategoryServiceImpl();
+        userService = new UserServiceImpl();
         watchlistService = new WatchlistServiceImpl();
     }
-    
-    /**
-     * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
-     */
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
@@ -70,39 +59,33 @@ public class ItemDetailsServlet extends HttpServlet {
                 return;
             }
             
-            // Get seller information
-            User seller = userService.getUserById(item.getSellerId());
+            // Get bid history
+            List<Bid> bidHistory = bidService.getBidsByItem(itemId);
             
-            // Get category information
-            Category category = categoryService.getCategoryById(item.getCategoryId());
+            // Get seller info
+            User sellerInfo = userService.getUserById(item.getSellerId());
             
-            // Get bids for this item
-            List<Bid> bids = bidService.getBidsByItem(itemId);
-            
-            // Get bid count
-            int bidCount = bidService.countBidsForItem(itemId);
-            
-            // Get similar items (same category)
-            List<Item> similarItems = itemService.getItemsByCategory(item.getCategoryId());
+            // Get similar items
+            List<Item> similarItems = itemService.getSimilarItems(itemId, 4);
             
             // Check if item is in user's watchlist
-            boolean inWatchlist = false;
-            if (request.getSession(false) != null && request.getSession().getAttribute("userId") != null) {
-                int userId = (int) request.getSession().getAttribute("userId");
-                inWatchlist = watchlistService.isItemInWatchlist(userId, itemId);
+            HttpSession session = request.getSession(false);
+            boolean isInWatchlist = false;
+            
+            if (session != null && session.getAttribute("userId") != null) {
+                int userId = (int) session.getAttribute("userId");
+                isInWatchlist = watchlistService.isItemInWatchlist(userId, itemId);
             }
             
             // Set attributes for JSP
             request.setAttribute("item", item);
-            request.setAttribute("seller", seller);
-            request.setAttribute("category", category);
-            request.setAttribute("bids", bids);
-            request.setAttribute("bidCount", bidCount);
+            request.setAttribute("bidHistory", bidHistory);
+            request.setAttribute("sellerInfo", sellerInfo);
             request.setAttribute("similarItems", similarItems);
-            request.setAttribute("inWatchlist", inWatchlist);
+            request.setAttribute("isInWatchlist", isInWatchlist);
             
             // Forward to item details page
-            request.getRequestDispatcher("items/details.jsp").forward(request, response);
+            request.getRequestDispatcher("item-details.jsp").forward(request, response);
             
         } catch (NumberFormatException e) {
             LOGGER.log(Level.SEVERE, "Invalid item ID format", e);
@@ -112,15 +95,5 @@ public class ItemDetailsServlet extends HttpServlet {
             request.setAttribute("errorMessage", "Database error: " + e.getMessage());
             request.getRequestDispatcher("error.jsp").forward(request, response);
         }
-    }
-    
-    /**
-     * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
-     */
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException {
-        // Forward POST requests to doGet
-        doGet(request, response);
     }
 }

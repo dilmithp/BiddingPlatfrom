@@ -36,9 +36,9 @@ public class LoginServlet extends HttpServlet {
             // Redirect based on role
             String role = (String) session.getAttribute("role");
             if ("admin".equals(role)) {
-                response.sendRedirect("admin/dashboard.jsp");
+                response.sendRedirect("admin/AdminDashboardServlet");
             } else if ("seller".equals(role)) {
-                response.sendRedirect("seller-dashboard.jsp");
+                response.sendRedirect("SellerDashboardServlet");
             } else {
                 response.sendRedirect("index.jsp");
             }
@@ -75,9 +75,9 @@ public class LoginServlet extends HttpServlet {
                 
                 // Redirect based on role
                 if ("admin".equals(user.getRole())) {
-                    response.sendRedirect("admin/dashboard.jsp");
+                    response.sendRedirect("admin/AdminDashboardServlet");
                 } else if ("seller".equals(user.getRole())) {
-                    response.sendRedirect("seller-dashboard.jsp");
+                    response.sendRedirect("SellerDashboardServlet");
                 } else {
                     response.sendRedirect("index.jsp");
                 }

@@ -17,10 +17,6 @@ import com.bidmaster.service.ItemService;
 import com.bidmaster.service.impl.ItemServiceImpl;
 import com.bidmaster.util.ImageUploadUtil;
 
-/**
- * Servlet implementation class DeleteItemServlet
- * Handles deleting items
- */
 @WebServlet("/DeleteItemServlet")
 public class DeleteItemServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
@@ -31,14 +27,10 @@ public class DeleteItemServlet extends HttpServlet {
     public void init() {
         itemService = new ItemServiceImpl();
     }
-    
-    /**
-     * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
-     */
+
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
         HttpSession session = request.getSession(false);
         
         // Check if user is logged in
@@ -59,15 +51,17 @@ public class DeleteItemServlet extends HttpServlet {
             
             if (item == null) {
                 LOGGER.log(Level.WARNING, "Item not found: {0}", itemId);
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                session.setAttribute("errorMessage", "Item not found");
+                response.sendRedirect("SellerDashboardServlet");
                 return;
             }
             
             // Check if user is the seller of this item or an admin
             if (item.getSellerId() != userId && !"admin".equals(userRole)) {
-                LOGGER.log(Level.WARNING, "Unauthorized access to delete item: {0} by user: {1}", 
+                LOGGER.log(Level.WARNING, "Unauthorized access to delete item: {0} by user: {1}",
                         new Object[]{itemId, userId});
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "You are not authorized to delete this item");
+                session.setAttribute("errorMessage", "You are not authorized to delete this item");
+                response.sendRedirect("SellerDashboardServlet");
                 return;
             }
             
@@ -81,33 +75,26 @@ public class DeleteItemServlet extends HttpServlet {
             
             if (deleted) {
                 LOGGER.log(Level.INFO, "Item deleted: {0}", itemId);
-                
-                // Redirect based on user role
-                if ("admin".equals(userRole)) {
-                    // Redirect admin to item management page
-                    response.sendRedirect("admin/AdminItemServlet?message=Item deleted successfully");
-                } else {
-                    // Redirect seller to their items page
-                    response.sendRedirect("MyItemsServlet?message=Item deleted successfully");
-                }
+                session.setAttribute("successMessage", "Item deleted successfully");
             } else {
-                request.setAttribute("errorMessage", "Failed to delete item");
-                
-                // Redirect based on user role
-                if ("admin".equals(userRole)) {
-                    request.getRequestDispatcher("admin/AdminItemServlet").forward(request, response);
-                } else {
-                    request.getRequestDispatcher("MyItemsServlet").forward(request, response);
-                }
+                LOGGER.log(Level.WARNING, "Failed to delete item: {0}", itemId);
+                session.setAttribute("errorMessage", "Failed to delete item");
             }
             
+            // Redirect based on user role
+            if ("admin".equals(userRole)) {
+                response.sendRedirect("admin/AdminItemServlet");
+            } else {
+                response.sendRedirect("SellerDashboardServlet");
+            }
         } catch (NumberFormatException e) {
             LOGGER.log(Level.SEVERE, "Invalid item ID format", e);
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid item ID");
+            session.setAttribute("errorMessage", "Invalid item ID");
+            response.sendRedirect("SellerDashboardServlet");
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Database error in DeleteItemServlet", e);
-            request.setAttribute("errorMessage", "Database error: " + e.getMessage());
-            request.getRequestDispatcher("error.jsp").forward(request, response);
+            session.setAttribute("errorMessage", "Database error: " + e.getMessage());
+            response.sendRedirect("SellerDashboardServlet");
         }
     }
 }

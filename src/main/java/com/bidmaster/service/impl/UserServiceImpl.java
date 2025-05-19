@@ -180,4 +180,14 @@ public class UserServiceImpl implements UserService {
         }
         return "seller".equals(user.getRole());
     }
+    
+    @Override
+    public List<User> getUsersByRole(String role) throws SQLException {
+        try {
+            return userDAO.getUsersByRole(role);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting users by role: " + role, e);
+            throw e;
+        }
+    }
 }
