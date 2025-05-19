@@ -121,4 +121,54 @@ public class TransactionServiceImpl implements TransactionService {
             throw e;
         }
     }
+
+    @Override
+    public List<Transaction> searchTransactions(String searchTerm) throws SQLException {
+        try {
+            return transactionDAO.searchTransactions(searchTerm);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error searching transactions", e);
+            throw e;
+        }
+    }
+
+    @Override
+    public List<Transaction> getTransactionsByStatus(String status) throws SQLException {
+        try {
+            return transactionDAO.getTransactionsByStatus(status);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting transactions by status", e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public List<Transaction> getCompletedSalesBySeller(int sellerId) throws SQLException {
+        try {
+            return transactionDAO.getCompletedSalesBySeller(sellerId);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting completed sales by seller: " + sellerId, e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public int getCompletedSalesCountBySeller(int sellerId) throws SQLException {
+        try {
+            return transactionDAO.getCompletedSalesCountBySeller(sellerId);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting completed sales count by seller: " + sellerId, e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public double getTotalRevenueBySeller(int sellerId) throws SQLException {
+        try {
+            return transactionDAO.getTotalRevenueBySeller(sellerId);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting total revenue by seller: " + sellerId, e);
+            throw e;
+        }
+    }
 }

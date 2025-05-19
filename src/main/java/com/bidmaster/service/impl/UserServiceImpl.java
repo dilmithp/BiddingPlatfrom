@@ -18,7 +18,7 @@ public class UserServiceImpl implements UserService {
     public UserServiceImpl() {
         this.userDAO = new UserDAOImpl();
     }
-    
+
     @Override
     public void registerUser(User user) throws SQLException {
         try {
@@ -124,6 +124,17 @@ public class UserServiceImpl implements UserService {
             throw e;
         }
     }
+    
+    @Override
+    public boolean validateUser(String username, String password) throws SQLException {
+        try {
+            return userDAO.validateUser(username, password);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error validating user", e);
+            throw e;
+        }
+    }
+
     @Override
     public int getUserCount() throws SQLException {
         try {
@@ -154,9 +165,19 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-	@Override
-	public boolean isAdmin(User user) {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    @Override
+    public boolean isAdmin(User user) {
+        if (user == null) {
+            return false;
+        }
+        return "admin".equals(user.getRole());
+    }
+    
+    @Override
+    public boolean isSeller(User user) {
+        if (user == null) {
+            return false;
+        }
+        return "seller".equals(user.getRole());
+    }
 }

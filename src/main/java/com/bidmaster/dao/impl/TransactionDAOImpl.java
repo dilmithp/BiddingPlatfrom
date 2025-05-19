@@ -5,8 +5,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -14,22 +20,116 @@ import com.bidmaster.dao.TransactionDAO;
 import com.bidmaster.model.Transaction;
 import com.bidmaster.util.DBConnectionUtil;
 
-/**
- * Implementation of TransactionDAO interface
- */
 public class TransactionDAOImpl implements TransactionDAO {
     private static final Logger LOGGER = Logger.getLogger(TransactionDAOImpl.class.getName());
     
-    private static final String INSERT_TRANSACTION = "INSERT INTO Transactions (itemId, sellerId, buyerId, amount, status, paymentMethod) VALUES (?, ?, ?, ?, ?, ?)";
-    private static final String GET_TRANSACTION_BY_ID = "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername FROM Transactions t JOIN Items i ON t.itemId = i.itemId JOIN Users s ON t.sellerId = s.userId JOIN Users b ON t.buyerId = b.userId WHERE t.transactionId = ?";
-    private static final String GET_TRANSACTIONS_BY_SELLER = "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername FROM Transactions t JOIN Items i ON t.itemId = i.itemId JOIN Users s ON t.sellerId = s.userId JOIN Users b ON t.buyerId = b.userId WHERE t.sellerId = ? ORDER BY t.transactionDate DESC";
-    private static final String GET_TRANSACTIONS_BY_BUYER = "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername FROM Transactions t JOIN Items i ON t.itemId = i.itemId JOIN Users s ON t.sellerId = s.userId JOIN Users b ON t.buyerId = b.userId WHERE t.buyerId = ? ORDER BY t.transactionDate DESC";
-    private static final String GET_TRANSACTIONS_BY_ITEM = "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername FROM Transactions t JOIN Items i ON t.itemId = i.itemId JOIN Users s ON t.sellerId = s.userId JOIN Users b ON t.buyerId = b.userId WHERE t.itemId = ? ORDER BY t.transactionDate DESC";
-    private static final String GET_ALL_TRANSACTIONS = "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername FROM Transactions t JOIN Items i ON t.itemId = i.itemId JOIN Users s ON t.sellerId = s.userId JOIN Users b ON t.buyerId = b.userId ORDER BY t.transactionDate DESC";
-    private static final String UPDATE_TRANSACTION_STATUS = "UPDATE Transactions SET status = ? WHERE transactionId = ?";
-    private static final String UPDATE_TRANSACTION_PAYMENT_METHOD = "UPDATE Transactions SET paymentMethod = ? WHERE transactionId = ?";
-    private static final String GET_TOTAL_REVENUE = "SELECT SUM(amount) FROM Transactions WHERE status = 'completed'";
-    private static final String GET_REVENUE_FOR_PERIOD = "SELECT SUM(amount) FROM Transactions WHERE status = 'completed' AND transactionDate >= DATE_SUB(NOW(), INTERVAL ? DAY)";
+    private static final String INSERT_TRANSACTION = 
+        "INSERT INTO Transactions (itemId, sellerId, buyerId, amount, status, paymentMethod) " +
+        "VALUES (?, ?, ?, ?, ?, ?)";
+    
+    private static final String GET_TRANSACTION_BY_ID = 
+        "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername " +
+        "FROM Transactions t " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "JOIN Users s ON t.sellerId = s.userId " +
+        "JOIN Users b ON t.buyerId = b.userId " +
+        "WHERE t.transactionId = ?";
+    
+    private static final String GET_TRANSACTIONS_BY_SELLER = 
+        "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername " +
+        "FROM Transactions t " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "JOIN Users s ON t.sellerId = s.userId " +
+        "JOIN Users b ON t.buyerId = b.userId " +
+        "WHERE t.sellerId = ? " +
+        "ORDER BY t.transactionDate DESC";
+    
+    private static final String GET_TRANSACTIONS_BY_BUYER = 
+        "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername " +
+        "FROM Transactions t " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "JOIN Users s ON t.sellerId = s.userId " +
+        "JOIN Users b ON t.buyerId = b.userId " +
+        "WHERE t.buyerId = ? " +
+        "ORDER BY t.transactionDate DESC";
+    
+    private static final String GET_TRANSACTIONS_BY_ITEM = 
+        "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername " +
+        "FROM Transactions t " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "JOIN Users s ON t.sellerId = s.userId " +
+        "JOIN Users b ON t.buyerId = b.userId " +
+        "WHERE t.itemId = ? " +
+        "ORDER BY t.transactionDate DESC";
+    
+    private static final String GET_ALL_TRANSACTIONS = 
+        "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername " +
+        "FROM Transactions t " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "JOIN Users s ON t.sellerId = s.userId " +
+        "JOIN Users b ON t.buyerId = b.userId " +
+        "ORDER BY t.transactionDate DESC";
+    
+    private static final String UPDATE_TRANSACTION_STATUS = 
+        "UPDATE Transactions SET status = ? WHERE transactionId = ?";
+    
+    private static final String UPDATE_TRANSACTION_PAYMENT_METHOD = 
+        "UPDATE Transactions SET paymentMethod = ? WHERE transactionId = ?";
+    
+    private static final String GET_TOTAL_REVENUE = 
+        "SELECT SUM(amount) FROM Transactions WHERE status = 'completed'";
+    
+    private static final String GET_REVENUE_FOR_PERIOD = 
+        "SELECT SUM(amount) FROM Transactions WHERE status = 'completed' AND transactionDate >= DATE_SUB(NOW(), INTERVAL ? DAY)";
+    
+    private static final String SEARCH_TRANSACTIONS = 
+        "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername " +
+        "FROM Transactions t " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "JOIN Users s ON t.sellerId = s.userId " +
+        "JOIN Users b ON t.buyerId = b.userId " +
+        "WHERE i.title LIKE ? OR s.username LIKE ? OR b.username LIKE ? " +
+        "ORDER BY t.transactionDate DESC";
+    
+    private static final String GET_TRANSACTIONS_BY_STATUS = 
+        "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername " +
+        "FROM Transactions t " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "JOIN Users s ON t.sellerId = s.userId " +
+        "JOIN Users b ON t.buyerId = b.userId " +
+        "WHERE t.status = ? " +
+        "ORDER BY t.transactionDate DESC";
+    
+    private static final String GET_TRANSACTIONS_IN_DATE_RANGE = 
+        "SELECT t.*, i.title as itemTitle, s.username as sellerUsername, b.username as buyerUsername " +
+        "FROM Transactions t " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "JOIN Users s ON t.sellerId = s.userId " +
+        "JOIN Users b ON t.buyerId = b.userId " +
+        "WHERE t.transactionDate BETWEEN ? AND ? " +
+        "ORDER BY t.transactionDate DESC";
+    
+    private static final String GET_MONTHLY_REVENUE = 
+        "SELECT DATE_FORMAT(transactionDate, '%b %Y') as month, SUM(amount) as revenue " +
+        "FROM Transactions " +
+        "WHERE status = 'completed' AND transactionDate BETWEEN ? AND ? " +
+        "GROUP BY DATE_FORMAT(transactionDate, '%b %Y') " +
+        "ORDER BY MIN(transactionDate)";
+    
+    private static final String GET_COMPLETED_SALES_BY_SELLER = 
+        "SELECT t.*, i.title as itemTitle, i.imageUrl, s.username as sellerUsername, b.username as buyerUsername, i.endTime " +
+        "FROM Transactions t " +
+        "JOIN Items i ON t.itemId = i.itemId " +
+        "JOIN Users s ON t.sellerId = s.userId " +
+        "JOIN Users b ON t.buyerId = b.userId " +
+        "WHERE t.sellerId = ? AND t.status = 'completed' " +
+        "ORDER BY t.transactionDate DESC";
+    
+    private static final String GET_COMPLETED_SALES_COUNT_BY_SELLER = 
+        "SELECT COUNT(*) FROM Transactions WHERE sellerId = ? AND status = 'completed'";
+    
+    private static final String GET_TOTAL_REVENUE_BY_SELLER = 
+        "SELECT SUM(amount) FROM Transactions WHERE sellerId = ? AND status = 'completed'";
 
     @Override
     public int insertTransaction(Transaction transaction) throws SQLException {
@@ -77,6 +177,9 @@ public class TransactionDAOImpl implements TransactionDAO {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
                     transaction = extractTransactionFromResultSet(resultSet);
+                    transaction.setItemTitle(resultSet.getString("itemTitle"));
+                    transaction.setSellerUsername(resultSet.getString("sellerUsername"));
+                    transaction.setBuyerUsername(resultSet.getString("buyerUsername"));
                 }
             }
         } catch (SQLException e) {
@@ -97,6 +200,9 @@ public class TransactionDAOImpl implements TransactionDAO {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Transaction transaction = extractTransactionFromResultSet(resultSet);
+                    transaction.setItemTitle(resultSet.getString("itemTitle"));
+                    transaction.setSellerUsername(resultSet.getString("sellerUsername"));
+                    transaction.setBuyerUsername(resultSet.getString("buyerUsername"));
                     transactions.add(transaction);
                 }
             }
@@ -118,6 +224,9 @@ public class TransactionDAOImpl implements TransactionDAO {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Transaction transaction = extractTransactionFromResultSet(resultSet);
+                    transaction.setItemTitle(resultSet.getString("itemTitle"));
+                    transaction.setSellerUsername(resultSet.getString("sellerUsername"));
+                    transaction.setBuyerUsername(resultSet.getString("buyerUsername"));
                     transactions.add(transaction);
                 }
             }
@@ -139,6 +248,9 @@ public class TransactionDAOImpl implements TransactionDAO {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Transaction transaction = extractTransactionFromResultSet(resultSet);
+                    transaction.setItemTitle(resultSet.getString("itemTitle"));
+                    transaction.setSellerUsername(resultSet.getString("sellerUsername"));
+                    transaction.setBuyerUsername(resultSet.getString("buyerUsername"));
                     transactions.add(transaction);
                 }
             }
@@ -158,6 +270,9 @@ public class TransactionDAOImpl implements TransactionDAO {
             
             while (resultSet.next()) {
                 Transaction transaction = extractTransactionFromResultSet(resultSet);
+                transaction.setItemTitle(resultSet.getString("itemTitle"));
+                transaction.setSellerUsername(resultSet.getString("sellerUsername"));
+                transaction.setBuyerUsername(resultSet.getString("buyerUsername"));
                 transactions.add(transaction);
             }
         } catch (SQLException e) {
@@ -237,7 +352,176 @@ public class TransactionDAOImpl implements TransactionDAO {
                 return 0;
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error getting revenue for period", e);
+            LOGGER.log(Level.SEVERE, "Error getting revenue for period: " + days + " days", e);
+            throw e;
+        }
+    }
+
+    @Override
+    public List<Transaction> searchTransactions(String searchTerm) throws SQLException {
+        List<Transaction> transactions = new ArrayList<>();
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(SEARCH_TRANSACTIONS)) {
+            
+            String searchPattern = "%" + searchTerm + "%";
+            preparedStatement.setString(1, searchPattern);
+            preparedStatement.setString(2, searchPattern);
+            preparedStatement.setString(3, searchPattern);
+            
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Transaction transaction = extractTransactionFromResultSet(resultSet);
+                    transaction.setItemTitle(resultSet.getString("itemTitle"));
+                    transaction.setSellerUsername(resultSet.getString("sellerUsername"));
+                    transaction.setBuyerUsername(resultSet.getString("buyerUsername"));
+                    transactions.add(transaction);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error searching transactions: " + searchTerm, e);
+            throw e;
+        }
+        return transactions;
+    }
+
+    @Override
+    public List<Transaction> getTransactionsByStatus(String status) throws SQLException {
+        List<Transaction> transactions = new ArrayList<>();
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(GET_TRANSACTIONS_BY_STATUS)) {
+            
+            preparedStatement.setString(1, status);
+            
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Transaction transaction = extractTransactionFromResultSet(resultSet);
+                    transaction.setItemTitle(resultSet.getString("itemTitle"));
+                    transaction.setSellerUsername(resultSet.getString("sellerUsername"));
+                    transaction.setBuyerUsername(resultSet.getString("buyerUsername"));
+                    transactions.add(transaction);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting transactions by status: " + status, e);
+            throw e;
+        }
+        return transactions;
+    }
+
+    @Override
+    public List<Transaction> getTransactionsInDateRange(LocalDate startDate, LocalDate endDate) throws SQLException {
+        List<Transaction> transactions = new ArrayList<>();
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(GET_TRANSACTIONS_IN_DATE_RANGE)) {
+            
+            preparedStatement.setDate(1, Date.valueOf(startDate));
+            preparedStatement.setDate(2, Date.valueOf(endDate));
+            
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Transaction transaction = extractTransactionFromResultSet(resultSet);
+                    transaction.setItemTitle(resultSet.getString("itemTitle"));
+                    transaction.setSellerUsername(resultSet.getString("sellerUsername"));
+                    transaction.setBuyerUsername(resultSet.getString("buyerUsername"));
+                    transactions.add(transaction);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting transactions in date range", e);
+            throw e;
+        }
+        return transactions;
+    }
+
+    @Override
+    public Map<String, Double> getMonthlyRevenue(LocalDate startDate, LocalDate endDate) throws SQLException {
+        Map<String, Double> monthlyRevenue = new LinkedHashMap<>();
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(GET_MONTHLY_REVENUE)) {
+            
+            preparedStatement.setDate(1, Date.valueOf(startDate));
+            preparedStatement.setDate(2, Date.valueOf(endDate));
+            
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    String month = resultSet.getString("month");
+                    double revenue = resultSet.getDouble("revenue");
+                    monthlyRevenue.put(month, revenue);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting monthly revenue", e);
+            throw e;
+        }
+        return monthlyRevenue;
+    }
+    
+    @Override
+    public List<Transaction> getCompletedSalesBySeller(int sellerId) throws SQLException {
+        List<Transaction> transactions = new ArrayList<>();
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(GET_COMPLETED_SALES_BY_SELLER)) {
+            
+            preparedStatement.setInt(1, sellerId);
+            
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Transaction transaction = extractTransactionFromResultSet(resultSet);
+                    transaction.setItemTitle(resultSet.getString("itemTitle"));
+                    transaction.setSellerUsername(resultSet.getString("sellerUsername"));
+                    transaction.setBuyerUsername(resultSet.getString("buyerUsername"));
+                    transaction.setImageUrl(resultSet.getString("imageUrl"));
+                    
+                    // Get end time for display
+                    Timestamp endTime = resultSet.getTimestamp("endTime");
+                    if (endTime != null) {
+                        transaction.setEndTime(endTime.toLocalDateTime());
+                    }
+                    
+                    transactions.add(transaction);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting completed sales by seller: " + sellerId, e);
+            throw e;
+        }
+        return transactions;
+    }
+    
+    @Override
+    public int getCompletedSalesCountBySeller(int sellerId) throws SQLException {
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(GET_COMPLETED_SALES_COUNT_BY_SELLER)) {
+            
+            preparedStatement.setInt(1, sellerId);
+            
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1);
+                }
+                return 0;
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting completed sales count by seller: " + sellerId, e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public double getTotalRevenueBySeller(int sellerId) throws SQLException {
+        try (Connection connection = DBConnectionUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(GET_TOTAL_REVENUE_BY_SELLER)) {
+            
+            preparedStatement.setInt(1, sellerId);
+            
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getDouble(1);
+                }
+                return 0;
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting total revenue by seller: " + sellerId, e);
             throw e;
         }
     }
@@ -259,12 +543,6 @@ public class TransactionDAOImpl implements TransactionDAO {
         transaction.setTransactionDate(resultSet.getTimestamp("transactionDate"));
         transaction.setStatus(resultSet.getString("status"));
         transaction.setPaymentMethod(resultSet.getString("paymentMethod"));
-        
-        // Set additional display fields
-        transaction.setItemTitle(resultSet.getString("itemTitle"));
-        transaction.setSellerUsername(resultSet.getString("sellerUsername"));
-        transaction.setBuyerUsername(resultSet.getString("buyerUsername"));
-        
         return transaction;
     }
 }

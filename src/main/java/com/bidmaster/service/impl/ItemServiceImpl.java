@@ -152,7 +152,7 @@ public class ItemServiceImpl implements ItemService {
             throw e;
         }
     }
-    
+
     @Override
     public int getActiveItemCount() throws SQLException {
         try {
@@ -179,6 +179,26 @@ public class ItemServiceImpl implements ItemService {
             return itemDAO.getRecentItems(limit);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error getting recent items with limit " + limit, e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public List<Item> getActiveItemsBySeller(int sellerId) throws SQLException {
+        try {
+            return itemDAO.getActiveItemsBySeller(sellerId);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting active items by seller: " + sellerId, e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public int getActiveItemCountBySeller(int sellerId) throws SQLException {
+        try {
+            return itemDAO.getActiveItemCountBySeller(sellerId);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting active item count by seller: " + sellerId, e);
             throw e;
         }
     }

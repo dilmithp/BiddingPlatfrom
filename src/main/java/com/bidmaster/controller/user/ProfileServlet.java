@@ -7,22 +7,26 @@ import java.util.logging.Logger;
 
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.Part;
 
 import com.bidmaster.model.User;
 import com.bidmaster.service.UserService;
 import com.bidmaster.service.impl.UserServiceImpl;
+import com.bidmaster.util.ImageUploadUtil;
 import com.bidmaster.util.ValidationUtil;
 
-/**
- * Servlet implementation class ProfileServlet
- * Handles user profile viewing and updating
- */
 @WebServlet("/ProfileServlet")
+@MultipartConfig(
+    fileSizeThreshold = 1024 * 1024 * 1, // 1 MB
+    maxFileSize = 1024 * 1024 * 5,      // 5 MB
+    maxRequestSize = 1024 * 1024 * 10    // 10 MB
+)
 public class ProfileServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private static final Logger LOGGER = Logger.getLogger(ProfileServlet.class.getName());
@@ -143,6 +147,26 @@ public class ProfileServlet extends HttpServlet {
                 }
             }
             
+            // Handle profile image upload
+            String profileImagePath = user.getProfileImage(); // Keep existing image by default
+            try {
+                Part profileImagePart = request.getPart("profileImage");
+                if (profileImagePart != null && profileImagePart.getSize() > 0) {
+                    // Delete old image if exists
+                    if (profileImagePath != null && !profileImagePath.isEmpty() && 
+                        !profileImagePath.equals("assets/images/default-avatar.png")) {
+                        ImageUploadUtil.deleteImage(profileImagePath, getServletContext());
+                    }
+                    
+                    // Upload new image
+                    profileImagePath = ImageUploadUtil.uploadImage(profileImagePart, getServletContext());
+                }
+            } catch (Exception e) {
+                request.setAttribute("imageError", "Error uploading image: " + e.getMessage());
+                isValid = false;
+                LOGGER.log(Level.SEVERE, "Error uploading profile image", e);
+            }
+            
             if (!isValid) {
                 // Return to form with error messages
                 request.setAttribute("user", user);
@@ -154,6 +178,7 @@ public class ProfileServlet extends HttpServlet {
             user.setEmail(email);
             user.setFullName(fullName);
             user.setContactNo(contactNo);
+            user.setProfileImage(profileImagePath);
             
             if (changePassword) {
                 user.setPassword(newPassword);

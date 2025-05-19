@@ -30,6 +30,21 @@ public class LoginServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+        // Check if user is already logged in
+        HttpSession session = request.getSession(false);
+        if (session != null && session.getAttribute("username") != null) {
+            // Redirect based on role
+            String role = (String) session.getAttribute("role");
+            if ("admin".equals(role)) {
+                response.sendRedirect("admin/dashboard.jsp");
+            } else if ("seller".equals(role)) {
+                response.sendRedirect("seller-dashboard.jsp");
+            } else {
+                response.sendRedirect("index.jsp");
+            }
+            return;
+        }
+        
         // Forward to login page
         request.getRequestDispatcher("login.jsp").forward(request, response);
     }
@@ -37,18 +52,23 @@ public class LoginServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        
         String username = request.getParameter("username");
         String password = request.getParameter("password");
         
         try {
-            if (userService.authenticateUser(username, password)) {
+            // Validate credentials
+            boolean isValid = userService.validateUser(username, password);
+            
+            if (isValid) {
+                // Get user details
                 User user = userService.getUserByUsername(username);
                 
+                // Create session
                 HttpSession session = request.getSession();
                 session.setAttribute("userId", user.getUserId());
-                session.setAttribute("username", username);
+                session.setAttribute("username", user.getUsername());
                 session.setAttribute("fullName", user.getFullName());
+                session.setAttribute("email", user.getEmail());
                 session.setAttribute("role", user.getRole());
                 
                 LOGGER.log(Level.INFO, "User logged in: {0}", username);
@@ -56,6 +76,8 @@ public class LoginServlet extends HttpServlet {
                 // Redirect based on role
                 if ("admin".equals(user.getRole())) {
                     response.sendRedirect("admin/dashboard.jsp");
+                } else if ("seller".equals(user.getRole())) {
+                    response.sendRedirect("seller-dashboard.jsp");
                 } else {
                     response.sendRedirect("index.jsp");
                 }

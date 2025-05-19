@@ -1,7 +1,10 @@
 package com.bidmaster.dao;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+
 import com.bidmaster.model.Transaction;
 
 /**
@@ -97,4 +100,69 @@ public interface TransactionDAO {
      * @throws SQLException if a database error occurs
      */
     double getRevenueForPeriod(int days) throws SQLException;
+    
+    /**
+     * Searches for transactions by keyword
+     * 
+     * @param searchTerm The search term
+     * @return List of matching transactions
+     * @throws SQLException if a database error occurs
+     */
+    List<Transaction> searchTransactions(String searchTerm) throws SQLException;
+    
+    /**
+     * Gets transactions by status
+     * 
+     * @param status The status to filter by
+     * @return List of transactions with the specified status
+     * @throws SQLException if a database error occurs
+     */
+    List<Transaction> getTransactionsByStatus(String status) throws SQLException;
+    
+    /**
+     * Gets transactions within a date range
+     * 
+     * @param startDate The start date
+     * @param endDate The end date
+     * @return List of transactions within the date range
+     * @throws SQLException if a database error occurs
+     */
+    List<Transaction> getTransactionsInDateRange(LocalDate startDate, LocalDate endDate) throws SQLException;
+    
+    /**
+     * Gets monthly revenue data
+     * 
+     * @param startDate The start date
+     * @param endDate The end date
+     * @return Map with months as keys and revenue as values
+     * @throws SQLException if a database error occurs
+     */
+    Map<String, Double> getMonthlyRevenue(LocalDate startDate, LocalDate endDate) throws SQLException;
+    
+    /**
+     * Gets completed sales by seller
+     *
+     * @param sellerId The seller ID
+     * @return List of completed sales for the seller
+     * @throws SQLException if a database error occurs
+     */
+    List<Transaction> getCompletedSalesBySeller(int sellerId) throws SQLException;
+    
+    /**
+     * Gets the count of completed sales by seller
+     *
+     * @param sellerId The seller ID
+     * @return The count of completed sales
+     * @throws SQLException if a database error occurs
+     */
+    int getCompletedSalesCountBySeller(int sellerId) throws SQLException;
+    
+    /**
+     * Gets the total revenue by seller
+     *
+     * @param sellerId The seller ID
+     * @return The total revenue for the seller
+     * @throws SQLException if a database error occurs
+     */
+    double getTotalRevenueBySeller(int sellerId) throws SQLException;
 }

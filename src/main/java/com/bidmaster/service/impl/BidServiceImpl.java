@@ -33,6 +33,7 @@ public class BidServiceImpl implements BidService {
         try {
             // Get the item to check if bidding is allowed
             Item item = itemDAO.getItemById(itemId);
+            
             if (item == null) {
                 throw new SQLException("Item not found");
             }
@@ -149,6 +150,7 @@ public class BidServiceImpl implements BidService {
     public boolean cancelBid(int bidId) throws SQLException {
         try {
             Bid bid = bidDAO.getBidById(bidId);
+            
             if (bid == null) {
                 throw new SQLException("Bid not found");
             }
@@ -185,7 +187,7 @@ public class BidServiceImpl implements BidService {
             throw e;
         }
     }
-    
+
     @Override
     public int getTotalBidCount() throws SQLException {
         try {
@@ -202,6 +204,26 @@ public class BidServiceImpl implements BidService {
             return bidDAO.getNewBidCount(days);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error getting new bid count for last " + days + " days", e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public List<Bid> getRecentBidsForSeller(int sellerId, int limit) throws SQLException {
+        try {
+            return bidDAO.getRecentBidsForSeller(sellerId, limit);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting recent bids for seller: " + sellerId, e);
+            throw e;
+        }
+    }
+    
+    @Override
+    public int getTotalBidsCountForSeller(int sellerId) throws SQLException {
+        try {
+            return bidDAO.getTotalBidsCountForSeller(sellerId);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting total bids count for seller: " + sellerId, e);
             throw e;
         }
     }

@@ -37,7 +37,6 @@ public class RegisterServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        
         // Get form parameters
         String username = request.getParameter("username");
         String email = request.getParameter("email");
@@ -45,12 +44,18 @@ public class RegisterServlet extends HttpServlet {
         String confirmPassword = request.getParameter("confirmPassword");
         String fullName = request.getParameter("fullName");
         String contactNo = request.getParameter("contactNo");
+        String role = request.getParameter("role");
+        
+        // Set default role if not specified or invalid
+        if (role == null || (!role.equals("user") && !role.equals("seller"))) {
+            role = "user";
+        }
         
         // Validate input
         boolean isValid = true;
         
         if (!ValidationUtil.isValidUsername(username)) {
-            request.setAttribute("usernameError", "Username must be 3-50 characters and contain only letters, numbers, and underscores");
+            request.setAttribute("usernameError", "Username must be 3-20 characters long and contain only letters, numbers, and underscores");
             isValid = false;
         }
         
@@ -85,11 +90,36 @@ public class RegisterServlet extends HttpServlet {
             request.setAttribute("email", email);
             request.setAttribute("fullName", fullName);
             request.setAttribute("contactNo", contactNo);
+            request.setAttribute("role", role);
             request.getRequestDispatcher("register.jsp").forward(request, response);
             return;
         }
         
         try {
+            // Check if username already exists
+            if (userService.getUserByUsername(username) != null) {
+                request.setAttribute("usernameError", "Username already exists");
+                request.setAttribute("username", username);
+                request.setAttribute("email", email);
+                request.setAttribute("fullName", fullName);
+                request.setAttribute("contactNo", contactNo);
+                request.setAttribute("role", role);
+                request.getRequestDispatcher("register.jsp").forward(request, response);
+                return;
+            }
+            
+            // Check if email already exists
+            if (userService.getUserByEmail(email) != null) {
+                request.setAttribute("emailError", "Email already exists");
+                request.setAttribute("username", username);
+                request.setAttribute("email", email);
+                request.setAttribute("fullName", fullName);
+                request.setAttribute("contactNo", contactNo);
+                request.setAttribute("role", role);
+                request.getRequestDispatcher("register.jsp").forward(request, response);
+                return;
+            }
+            
             // Create user object
             User user = new User();
             user.setUsername(username);
@@ -97,7 +127,7 @@ public class RegisterServlet extends HttpServlet {
             user.setPassword(password);
             user.setFullName(fullName);
             user.setContactNo(contactNo);
-            user.setRole("user");
+            user.setRole(role);
             
             // Register user
             userService.registerUser(user);
@@ -109,21 +139,8 @@ public class RegisterServlet extends HttpServlet {
             request.getRequestDispatcher("login.jsp").forward(request, response);
             
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error during registration", e);
-            
-            if (e.getMessage().contains("Username already exists")) {
-                request.setAttribute("usernameError", "Username already exists");
-            } else if (e.getMessage().contains("Email already exists")) {
-                request.setAttribute("emailError", "Email already exists");
-            } else {
-                request.setAttribute("errorMessage", "Registration failed: " + e.getMessage());
-            }
-            
-            // Return to form with error messages
-            request.setAttribute("username", username);
-            request.setAttribute("email", email);
-            request.setAttribute("fullName", fullName);
-            request.setAttribute("contactNo", contactNo);
+            LOGGER.log(Level.SEVERE, "Database error during registration", e);
+            request.setAttribute("errorMessage", "Database error: " + e.getMessage());
             request.getRequestDispatcher("register.jsp").forward(request, response);
         }
     }
